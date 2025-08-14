@@ -112,12 +112,11 @@ This project is designed to be built in distinct, sequential phases. Each phase 
 
 ## 3\. Setup and Installation
 
-1.  \*\*Clone the repository:\*\*bash
-    git clone [https://github.com/your-username/project-sentinel.git](https://www.google.com/search?q=https://github.com/your-username/project-sentinel.git)
-    cd project-sentinel
+1.  **Clone the repository:**
 
-    ```
-    
+    ```bash
+    git clone https://github.com/mwridgway/StratagemForge.git
+    cd StratagemForge
     ```
 
 2.  **Create and activate a Python environment:**
@@ -190,6 +189,3 @@ Contributions are welcome\! Please feel free to open an issue to discuss a new f
 ## 6\. License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
-
-```
-```
