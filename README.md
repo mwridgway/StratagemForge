@@ -1,5 +1,3 @@
-Of course. Here is the source markdown for the `README.md` file.
-
 # Strategem Forge: AI-Powered Counter-Strike 2 Analytics Platform
 
 ## 1\. Overview
