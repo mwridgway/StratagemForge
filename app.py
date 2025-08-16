@@ -10,6 +10,9 @@ app = dash.Dash(__name__,
 
 # Define the layout with navigation
 app.layout = dbc.Container([
+    # Store components for sharing data between pages
+    dcc.Store(id='selected-demo-store', storage_type='session'),
+    
     dbc.NavbarSimple(
         children=[
             dbc.NavItem(dbc.NavLink("Home", href="/", active="exact")),

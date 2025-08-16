@@ -2,9 +2,14 @@ import polars as pl
 import awpy
 from awpy.plot import plot, PLOT_SETTINGS
 from awpy import Demo
+from awpy.stats import adr
+from awpy.plot import gif
+from tqdm import tqdm
 
 dem = Demo("demos/vitality-vs-mouz-m1-mirage-p1.dem")
 dem.parse(player_props=["health", "armor_value", "pitch", "yaw"])
+
+print(adr(dem))
 
 # Get the map name from the demo
 # Try different methods to extract map name
@@ -56,3 +61,37 @@ for row in frame_df.iter_rows(named=True):
     point_settings.append(settings)
 
 plot(map_name=map_name, points=points, point_settings=point_settings)
+
+frames = []
+
+for tick in tqdm(dem.ticks.filter(pl.col("round_num") == 1)["tick"].unique().to_list()[::16]):
+    frame_df = dem.ticks.filter(pl.col("tick") == tick)
+    frame_df = frame_df[
+        ["X", "Y", "Z", "health", "armor", "pitch", "yaw", "side", "name"]
+    ]
+
+    points = []
+    point_settings = []
+
+    for row in frame_df.iter_rows(named=True):
+        points.append((row["X"], row["Y"], row["Z"]))
+
+        # Determine team and corresponding settings
+        settings = PLOT_SETTINGS[row["side"]].copy()
+
+        # Add additional settings
+        settings.update(
+            {
+                "hp": row["health"],
+                "armor": row["armor"],
+                "direction": (row["pitch"], row["yaw"]),
+                "label": row["name"],
+            }
+        )
+
+        point_settings.append(settings)
+
+    frames.append({"points": points, "point_settings": point_settings})
+
+print("Finished processing frames. Creating gif...")
+gif(map_name, frames, f"{map_name}.gif", duration=100)

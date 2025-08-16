@@ -151,6 +151,22 @@ This project is designed to be built in distinct, sequential phases. Each phase 
     ollama pull nomic-embed-text
     ```
 
+6.  **Setup Map Data:**
+
+      * First, download the awpy map data:
+
+    ```powershell
+    awpy get maps
+    ```
+
+      * Create a symbolic link to the awpy maps directory in your project:
+
+    ```powershell
+    cmd /c "mklink /J maps $env:USERPROFILE\.awpy\maps"
+    ```
+
+    This creates a junction (symbolic link) that allows the project to access map images and metadata directly from the awpy installation.
+
 -----
 
 ## 4\. Usage

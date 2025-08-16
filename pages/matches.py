@@ -136,21 +136,37 @@ def update_demo_table(n_clicks):
     return table_display, storage_display
 
 @callback(
-    Output('selected-demo-info', 'children'),
+    [Output('selected-demo-info', 'children'),
+     Output('selected-demo-store', 'data')],
     Input('demo-table', 'selected_rows'),
     Input('demo-table', 'data')
 )
 def display_selected_demo(selected_rows, data):
     if not selected_rows or not data:
-        return ""
+        return "", None
     
     selected_demo = data[selected_rows[0]]
     
-    return dbc.Alert([
+    # Store the selected demo data
+    demo_data = {
+        'filename': selected_demo['filename'],
+        'size_mb': selected_demo['size_mb'],
+        'modified': selected_demo['modified'],
+        'status': selected_demo['status']
+    }
+    
+    display_content = dbc.Alert([
         html.H5(f"Selected: {selected_demo['filename']}", className="mb-2"),
         html.P(f"Size: {selected_demo['size_mb']} MB | Modified: {selected_demo['modified']}"),
-        dbc.Button("Analyze This Demo", color="success", href="/analysis", className="mt-2")
+        dbc.Button(
+            "Analyze This Demo",
+            color="success",
+            href="/analysis",
+            className="mt-2"
+        )
     ], color="info")
+    
+    return display_content, demo_data
 
 # Modal control callbacks
 @callback(

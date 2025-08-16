@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, callback, Input, Output
+from dash import html, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import plotly.express as px
@@ -11,6 +11,9 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.H2("Round Analysis", className="mb-4"),
+            
+            # Demo info display
+            html.Div(id="selected-demo-display", className="mb-3"),
             
             dbc.Card([
                 dbc.CardHeader([
@@ -75,12 +78,54 @@ layout = dbc.Container([
 ])
 
 @callback(
-    Output('map-display', 'children'),
-    Input('round-selector', 'value')
+    Output('selected-demo-display', 'children'),
+    Input('selected-demo-store', 'data')
 )
-def update_map_display(selected_round):
-    # This would normally get the map from the demo data
-    return "de_mirage"
+def display_selected_demo_info(demo_data):
+    if not demo_data:
+        return dbc.Alert([
+            html.I(className="fas fa-exclamation-triangle me-2"),
+            "No demo selected. Please go to ",
+            html.A("Match Selection", href="/matches", className="alert-link"),
+            " to choose a demo file for analysis."
+        ], color="warning")
+    
+    return dbc.Alert([
+        html.I(className="fas fa-file me-2"),
+        html.Strong(f"Analyzing: {demo_data['filename']}"),
+        html.Br(),
+        html.Small(f"Size: {demo_data['size_mb']} MB | Modified: {demo_data['modified']}")
+    ], color="info")
+
+@callback(
+    Output('map-display', 'children'),
+    [Input('round-selector', 'value'),
+     Input('selected-demo-store', 'data')]
+)
+def update_map_display(selected_round, demo_data):
+    if not demo_data:
+        return "No demo selected"
+    
+    # Extract map name from filename if possible
+    filename = demo_data['filename'].lower()
+    if 'mirage' in filename:
+        map_name = 'de_mirage'
+    elif 'dust2' in filename:
+        map_name = 'de_dust2'
+    elif 'inferno' in filename:
+        map_name = 'de_inferno'
+    elif 'cache' in filename:
+        map_name = 'de_cache'
+    elif 'overpass' in filename:
+        map_name = 'de_overpass'
+    elif 'train' in filename:
+        map_name = 'de_train'
+    elif 'nuke' in filename:
+        map_name = 'de_nuke'
+    else:
+        map_name = 'de_dust2'  # Default fallback
+    
+    return map_name
 
 @callback(
     Output('map-graph', 'figure'),
