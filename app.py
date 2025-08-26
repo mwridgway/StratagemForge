@@ -1,6 +1,21 @@
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
+import logging
+import warnings
+import os
+
+# Configure logging to suppress specific warnings
+logging.basicConfig(level=logging.INFO)
+logging.getLogger().setLevel(logging.WARNING)
+
+# Suppress specific warnings that might come from dependencies
+warnings.filterwarnings("ignore", message=".*ScriptRunContext.*")
+warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
+warnings.filterwarnings("ignore", category=UserWarning, module=".*streamlit.*")
+
+# Set environment variable to suppress streamlit warnings if any dependency uses it
+os.environ['STREAMLIT_SUPPRESS_WARNING'] = '1'
 
 # Initialize the Dash app with Bootstrap theme
 app = dash.Dash(__name__, 

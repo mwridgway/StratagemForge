@@ -1,8 +1,15 @@
+from awpy import Demo
 import dash
 from dash import html, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
+from flask import json
 import plotly.graph_objects as go
 import plotly.express as px
+from PIL import Image
+from awpy.plot import plot, PLOT_SETTINGS
+import polars as pl
+
+from utils.demo_utils import extract_map_name_from_filename
 
 # Register this page
 dash.register_page(__name__, path='/analysis', name='Round Analysis')
@@ -51,11 +58,11 @@ layout = dbc.Container([
                     ]),
                     
                     html.Hr(),
-                    
-                    # Map visualization area
+
+                    # Graph should be square and centered, zoomed out 
                     dcc.Graph(
                         id='map-graph',
-                        style={'height': '600px'},
+                        style={'height': '1024px', 'width': '1024px', 'margin': '0 auto'},
                         config={'displayModeBar': True}
                     ),
                     
@@ -105,98 +112,115 @@ def display_selected_demo_info(demo_data):
 def update_map_display(selected_round, demo_data):
     if not demo_data:
         return "No demo selected"
-    
-    # Extract map name from filename if possible
-    filename = demo_data['filename'].lower()
-    if 'mirage' in filename:
-        map_name = 'de_mirage'
-    elif 'dust2' in filename:
-        map_name = 'de_dust2'
-    elif 'inferno' in filename:
-        map_name = 'de_inferno'
-    elif 'cache' in filename:
-        map_name = 'de_cache'
-    elif 'overpass' in filename:
-        map_name = 'de_overpass'
-    elif 'train' in filename:
-        map_name = 'de_train'
-    elif 'nuke' in filename:
-        map_name = 'de_nuke'
-    else:
-        map_name = 'de_dust2'  # Default fallback
+
+    map_name = extract_map_name_from_filename(demo_data['filename'])
     
     return map_name
 
 @callback(
     Output('map-graph', 'figure'),
     [Input('round-selector', 'value'),
-     Input('time-slider', 'value')]
+     Input('time-slider', 'value'),
+     Input('selected-demo-store', 'data')]
 )
-def update_map_visualization(selected_round, time_value):
+def update_map_visualization(selected_round, time_value, demo_data):
     # Create a basic map visualization
     # This is a placeholder - in a real implementation, you'd load actual demo data
     
     fig = go.Figure()
-    
-    # Add map background (placeholder)
-    fig.add_shape(
-        type="rect",
-        x0=-2000, y0=-2000, x1=2000, y1=2000,
-        fillcolor="lightgray",
-        opacity=0.3,
-        layer="below",
-        line_width=0,
+
+    map_name = extract_map_name_from_filename(demo_data['filename'])
+    map_image = Image.open(f"maps/{map_name}.png")
+
+        # load the map-data.json file and get the pos_x and pos_y
+    # for the current map
+    with open("maps/map-data.json") as f:
+        map_data = json.load(f)
+
+    pos_x = 0
+    pos_y = 0
+    scale = 1
+    if map_name in map_data:
+        pos_x = map_data[map_name]["pos_x"]
+        pos_y = map_data[map_name]["pos_y"]
+        scale = map_data[map_name].get("scale", 1)
+
+    # get the map size from PLOT_SETTINGS
+    map_size = PLOT_SETTINGS.get("map_size", 1024)
+
+    fig.add_layout_image(
+        dict(
+            source=map_image,
+            xref="x",
+            yref="y",
+            x=pos_x/scale,
+            y=pos_y/scale, # Y-axis is often inverted
+            sizex=map_size,
+            sizey=map_size,
+            sizing="stretch",
+            layer="below"
+        )
     )
-    
-    # Sample player positions (T side in orange, CT side in blue)
-    t_players = [
-        {'name': 'Player1', 'x': 500, 'y': 500},
-        {'name': 'Player2', 'x': 600, 'y': 400},
-        {'name': 'Player3', 'x': 700, 'y': 300},
-        {'name': 'Player4', 'x': 800, 'y': 200},
-        {'name': 'Player5', 'x': 900, 'y': 100},
+
+
+    dem = Demo(f"demos/{demo_data['filename']}")
+    dem.parse(player_props=["health", "armor_value", "pitch", "yaw"])
+
+    # Get a random tick
+    frame_df = dem.ticks.filter(pl.col("tick") == dem.ticks["tick"].unique()[1])
+    frame_df = frame_df[
+        ["X", "Y", "Z", "health", "armor", "pitch", "yaw", "side", "name"]
     ]
-    
-    ct_players = [
-        {'name': 'CT1', 'x': -500, 'y': -500},
-        {'name': 'CT2', 'x': -600, 'y': -400},
-        {'name': 'CT3', 'x': -700, 'y': -300},
-        {'name': 'CT4', 'x': -800, 'y': -200},
-        {'name': 'CT5', 'x': -900, 'y': -100},
-    ]
-    
-    # Add T side players
+
+    all_players = []
+
+    for row in frame_df.iter_rows(named=True):
+        all_players.append({'name': f"{row['name']} ({row['side']})", 'x': row['X']/scale, 'y': row['Y']/scale})
+
     fig.add_scatter(
-        x=[p['x'] for p in t_players],
-        y=[p['y'] for p in t_players],
+        x=[p['x'] for p in all_players],
+        y=[p['y'] for p in all_players],
         mode='markers+text',
-        text=[p['name'] for p in t_players],
+        text=[p['name'] for p in all_players],
         textposition="top center",
-        marker=dict(size=15, color='orange', symbol='circle'),
-        name='Terrorists',
+        marker=dict(size=15, color='gray', symbol='circle'),
+        name='All Players',
         hovertemplate='<b>%{text}</b><br>X: %{x}<br>Y: %{y}<extra></extra>'
     )
-    
-    # Add CT side players
-    fig.add_scatter(
-        x=[p['x'] for p in ct_players],
-        y=[p['y'] for p in ct_players],
-        mode='markers+text',
-        text=[p['name'] for p in ct_players],
-        textposition="top center",
-        marker=dict(size=15, color='blue', symbol='circle'),
-        name='Counter-Terrorists',
-        hovertemplate='<b>%{text}</b><br>X: %{x}<br>Y: %{y}<extra></extra>'
-    )
-    
+
+    # special_points = []
+    # special_points.append({'name': 'Origin', 'x': pos_x/scale, 'y': pos_y/scale})
+    # special_points.append({'name': 'Zero', 'x': 0, 'y': 0})
+    # fig.add_scatter(
+    #     x=[p['x'] for p in special_points],
+    #     y=[p['y'] for p in special_points],
+    #     mode='markers+text',
+    #     text=[p['name'] for p in special_points],
+    #     textposition="top center",
+    #     marker=dict(size=15, color='red', symbol='circle'),
+    #     name='Special Points',
+    #     hovertemplate='<b>%{text}</b><br>X: %{x}<br>Y: %{y}<extra></extra>'
+    # )
+
+    map_range = []
+
+    # Update layout to make the graph perfectly square
     fig.update_layout(
-        title=f"Round {selected_round} - Time: {time_value}s",
-        xaxis_title="X Position",
-        yaxis_title="Y Position",
-        showlegend=True,
+        title=f"Round {selected_round} - Time: {time_value}s - {map_name}",
+        xaxis=dict(
+            range=[-512, 512],
+            constrain="domain",
+            scaleanchor="y",
+            scaleratio=1
+        ),
+        yaxis=dict(
+            range=[-512, 512],
+            constrain="domain"
+        ),
+        width=600,
         height=600,
-        xaxis=dict(range=[-2500, 2500]),
-        yaxis=dict(range=[-2500, 2500], scaleanchor="x", scaleratio=1)
+        showlegend=True,
+        margin=dict(l=50, r=50, t=50, b=50)
     )
     
     return fig

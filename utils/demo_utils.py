@@ -6,6 +6,26 @@ import shutil
 from datetime import datetime
 from typing import List, Dict, Optional
 
+def extract_map_name_from_filename(filename: str) -> str:
+    """Extract the map name from the demo filename"""
+    filename = filename.lower()
+    if 'mirage' in filename:
+        return 'de_mirage'
+    elif 'dust2' in filename:
+        return 'de_dust2'
+    elif 'inferno' in filename:
+        return 'de_inferno'
+    elif 'cache' in filename:
+        return 'de_cache'
+    elif 'overpass' in filename:
+        return 'de_overpass'
+    elif 'train' in filename:
+        return 'de_train'
+    elif 'nuke' in filename:
+        return 'de_nuke'
+    else:
+        return 'de_dust2'  # Default fallback
+
 def ensure_demos_directory() -> str:
     """Ensure the demos directory exists and return its path"""
     demo_dir = "demos"
