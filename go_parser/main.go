@@ -39,14 +39,14 @@ type TickData struct {
 }
 
 type DemoMetadata struct {
-	Filename     string `json:"filename"`
-	FilePath     string `json:"file_path"`
-	MapName      string `json:"map_name"`
-	TotalRounds  int    `json:"total_rounds"`
-	TotalTicks   int    `json:"total_ticks"`
-	Team1Score   int    `json:"team1_score"`
-	Team2Score   int    `json:"team2_score"`
-	Duration     int    `json:"duration_seconds"`
+	Filename    string `json:"filename"`
+	FilePath    string `json:"file_path"`
+	MapName     string `json:"map_name"`
+	TotalRounds int    `json:"total_rounds"`
+	TotalTicks  int    `json:"total_ticks"`
+	Team1Score  int    `json:"team1_score"`
+	Team2Score  int    `json:"team2_score"`
+	Duration    int    `json:"duration_seconds"`
 }
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 	fmt.Printf("🚀 Go Demo Parser - Processing: %s\n", filepath.Base(demoPath))
 
 	startTime := time.Now()
-	
+
 	// Parse the demo
 	metadata, ticks, err := parseDemoFile(demoPath)
 	if err != nil {
@@ -167,7 +167,7 @@ func parseDemoFile(demoPath string) (*DemoMetadata, []TickData, error) {
 					teamName = "T"
 					side = "T"
 				} else if player.Team == common.TeamCounterTerrorists {
-					teamName = "CT" 
+					teamName = "CT"
 					side = "CT"
 				}
 			}
@@ -177,7 +177,7 @@ func parseDemoFile(demoPath string) (*DemoMetadata, []TickData, error) {
 				Tick:         gs.IngameTick(),
 				RoundNum:     currentRound,
 				Seconds:      float64(gs.TotalRoundsPlayed()) * 115.0, // Approximate
-				ClockTime:    "",                             // TODO: Calculate actual clock time
+				ClockTime:    "",                                      // TODO: Calculate actual clock time
 				TScore:       team1Score,
 				CTScore:      team2Score,
 				SteamID:      player.SteamID64,
@@ -240,7 +240,7 @@ func exportToJSON(metadata *DemoMetadata, ticks []TickData, demoPath string) err
 
 		chunk := ticks[start:end]
 		chunkFile := filepath.Join(outputDir, fmt.Sprintf("%s_ticks_%d.json", baseName, i))
-		
+
 		if err := writeJSONFile(chunkFile, chunk); err != nil {
 			return fmt.Errorf("failed to write chunk %d: %w", i, err)
 		}
