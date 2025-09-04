@@ -101,7 +101,7 @@ Always use LIMIT clauses for large result sets and handle NULL values appropriat
 agent = create_sql_agent(
     llm=llm,
     db=db,
-    verbose=True,                    # show reasoning and SQL
+    verbose=False,                    # show reasoning and SQL
     top_k=15,                       # show more schema examples 
     prefix=schema_context,          # provide schema context upfront
     max_iterations=10,              # significantly increase iteration limit
