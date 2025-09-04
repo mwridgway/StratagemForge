@@ -1,0 +1,144 @@
+version: 1
+agent: Codex CLI
+project: StratagemForge
+description: >-
+  Centralized agent guidelines for Python best practices and the core
+  constraints from .github/copilot-instructions.md, focused on high-performance
+  CS:GO/CS2 demo analysis with DuckDB and pandas.
+
+language: python
+
+runtime:
+  python: "3.12"
+
+tools:
+  packaging:
+    manager: uv
+    build_system: hatchling
+  lint: ruff
+  type_check: mypy
+  test: pytest
+  cli: typer
+  config: [pydantic v2, pydantic-settings]
+  logging: structlog
+
+style:
+  code:
+    descriptive_names: true
+    docstrings_for_all_functions: true
+    type_hints: true
+    small_functions_max_lines: 50
+    separate_concerns: [parsing, analysis, visualization]
+  error_handling:
+    database_ops:
+      try_except_required: true
+      log_context: [query, data_size, timing]
+      graceful_degradation: true
+    user_friendly_messages: true
+  performance:
+    optimize_queries: true
+    prefer_columnar_ops: true
+    sampling_ticks_preferred: [32, 64]
+    log_operations_over_seconds: 1
+    cache_frequent_results: true
+
+data_optimization:
+  sql:
+    sample_large_datasets: "tick % 64 = 0"
+    zone_aggregation: "ROUND(X/400)*400, ROUND(Y/400)*400"
+    early_filtering: true
+    having_post_aggregation: true
+  types:
+    coordinates: int32
+    categorical_numeric: int8
+    repeated_strings: category
+    parquet_compression: snappy
+  memory:
+    process_in_chunks: true
+    use_generators: true
+    clear_intermediate_frames: true
+    monitor_rows_threshold: 1000000
+
+workflows:
+  modify_existing_files:
+    - "Create optimized_* variant first when risky"
+    - "Apply optimizations incrementally"
+    - "Maintain function signatures"
+    - "Add simple tests to verify gains"
+  new_analysis_queries:
+    - "Start with sampling: tick % N = 0"
+    - "Use ROUND(X/size)*size spatial grouping"
+    - "Filter early; use HAVING post-aggregation"
+    - "Limit low-signal results"
+  new_features:
+    - "Design with performance budget"
+    - "Add INFO logs for major ops"
+    - "Graceful failure with meaningful messages"
+    - "Update README and add examples"
+
+quality_gates:
+  checklist:
+    - "Applied sampling, indexing, and caching where applicable"
+    - "Error handling present for all DB operations"
+    - "Logged operations taking > 1 second"
+    - "Memory-efficient processing"
+    - "Clear names and docstrings"
+    - "Type hints where appropriate"
+    - "Examples or tests included"
+
+targets:
+  performance:
+    pipeline_processing_minutes_max: 5
+    query_execution_seconds_max: 2
+    memory_gb_max: 2
+    storage_mb_max: 500
+
+domain:
+  game: CS:GO/CS2
+  priorities:
+    - "Player positioning and movement patterns"
+    - "Team coordination and formations"
+    - "Utility usage and timing"
+    - "Map control and territory analysis"
+    - "Anti-stratting and predictable patterns"
+  sampling_strategy:
+    high: "tick % 32 = 0"
+    medium: "tick % 128 = 0"
+    low: "tick % 512 = 0"
+  zone_sizes_units:
+    fine: 200
+    strategic: 400
+    overview: 600
+
+defaults:
+  project_layout:
+    src_layout: true
+    package_name: stratagemforge
+    paths:
+      - src/stratagemforge
+      - tests
+      - scripts
+      - examples
+  logging:
+    production: json
+    local: pretty
+  config_loading_order: [env, .env]
+
+guidance_sources:
+  canonical:
+    - .github/copilot-instructions.md
+  superseded:
+    - CODE_INSTRUCTIONS.md
+
+active_goal: "Apply performance optimizations to existing pipeline and analysis scripts"
+key_areas:
+  - pipeline.py
+  - duckdb_connector.py
+  - expert_validation.py
+  - interactive_analysis.py
+success_criteria:
+  - "10x faster query execution"
+  - "Maintain analytical accuracy"
+  - "Professional-grade results"
+  - "Ready for expert validation"
+

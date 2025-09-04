@@ -2,6 +2,14 @@
 
 This repository contains tools to parse CS:GO demo files and analyze them using DuckDB for efficient SQL-based analysis.
 
+## Development & Agent Guidelines
+
+- `codex.yaml` — Canonical agent and engineering guidelines (Python best practices, performance, error handling, data optimization, tooling).
+- `.github/copilot-instructions.md` — Extended context and preferences for AI-assisted coding in this repo.
+- `PIPELINE_GUIDE.md` — End-to-end pipeline overview and operational notes.
+
+Note: Prior `CODE_INSTRUCTIONS.md` has been consolidated into `codex.yaml`.
+
 ## Files Overview
 
 - `pipeline.py` - Parses demo files using demoparser2 and converts to parquet format

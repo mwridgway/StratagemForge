@@ -5,6 +5,7 @@ import logging
 import time
 from typing import Optional, Dict, List
 from functools import lru_cache
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -16,7 +17,7 @@ class CSGODataAnalyzer:
     Optimized for performance with caching and indexing.
     """
     
-    def __init__(self, parquet_folder: str = "parquet", db_path: Optional[str] = None):
+    def __init__(self, parquet_folder: str = "parquet", db_path: Optional[str] = None, materialize: Optional[bool] = None):
         """
         Initialize the analyzer with parquet data.
         
@@ -35,6 +36,10 @@ class CSGODataAnalyzer:
         
         self._discover_demos()
         self._initialize_connection()
+        if materialize is None:
+            env_val = os.getenv('SF_MATERIALIZE', '').strip().lower()
+            materialize = env_val in {'1', 'true', 'yes', 'on'}
+        self.materialize = materialize
         self._create_optimized_views()
     
     def _discover_demos(self):
@@ -84,47 +89,108 @@ class CSGODataAnalyzer:
                 SELECT *, '{demo['name']}' as demo_name, '{data_type}' as data_type
                 FROM read_parquet('{file_path}')
                 """
-                    self.conn.execute(sql)
-                    logger.info(f"Created view: {view_name}")
+                self.conn.execute(sql)
+                logger.info(f"Created view: {view_name}")
         
         logger.info("Individual views created, now creating unified views...")
         # Create unified views across all demos
         self._create_unified_views()
         
-        logger.info("Unified views created, now creating indexes...")
-        # Create indexes after all views are created
-        self._create_indexes()    def _create_indexes(self):
-        """Create indexes on commonly queried columns for better performance."""
+        if self.materialize:
+            self._materialize_unified_views()
+            self._create_indexes()
+        else:
+            logger.info("Unified views created; skipping materialization (SF_MATERIALIZE not set)")
+
+    def _materialize_unified_views(self):
         try:
-            logger.info("Creating performance indexes...")
-            
-            # Common indexes for player_ticks (most queried table)
-            index_queries = [
-                # Indexes for player ticks - most common queries
-                "CREATE INDEX IF NOT EXISTS idx_player_ticks_name ON all_player_ticks(name)",
-                "CREATE INDEX IF NOT EXISTS idx_player_ticks_team ON all_player_ticks(m_iTeamNum)", 
-                "CREATE INDEX IF NOT EXISTS idx_player_ticks_tick ON all_player_ticks(tick)",
-                "CREATE INDEX IF NOT EXISTS idx_player_ticks_demo ON all_player_ticks(demo_name)",
-                "CREATE INDEX IF NOT EXISTS idx_player_ticks_position ON all_player_ticks(X, Y)",
-                
-                # Indexes for grenades
-                "CREATE INDEX IF NOT EXISTS idx_grenades_name ON all_grenades(name)",
-                "CREATE INDEX IF NOT EXISTS idx_grenades_type ON all_grenades(grenade_type)",
-                "CREATE INDEX IF NOT EXISTS idx_grenades_tick ON all_grenades(tick)",
-                "CREATE INDEX IF NOT EXISTS idx_grenades_position ON all_grenades(x, y)",
+            views = [
+                r[0]
+                for r in self.conn.execute(
+                    "SELECT table_name FROM information_schema.tables WHERE table_type='VIEW' AND table_name LIKE 'all_%'"
+                ).fetchall()
             ]
-            
-            for query in index_queries:
+            if not views:
+                logger.info("No unified views found to materialize")
+                return
+            for v in views:
+                t = f"{v}_mat"
+                self.conn.execute(f"CREATE OR REPLACE TABLE {t} AS SELECT * FROM {v}")
+                self.conn.execute(f"CREATE OR REPLACE VIEW {v} AS SELECT * FROM {t}")
+                logger.info(f"Materialized {v} -> {t} and redirected view")
+        except Exception as e:
+            logger.error(f"Failed to materialize unified views: {e}")
+            raise
+
+    def _create_indexes(self):
+        """Create indexes on materialized base tables."""
+        try:
+            mats = {
+                r[0] for r in self.conn.execute(
+                    "SELECT table_name FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_name LIKE 'all_%_mat'"
+                ).fetchall()
+            }
+            if not mats:
+                logger.info("No materialized tables found; skipping index creation")
+                return
+            logger.info(f"Creating indexes on {len(mats)} materialized tables")
+
+            def has(tbl: str, cols: List[str]) -> bool:
+                cols_set = {
+                    r[0].lower() for r in self.conn.execute(f"PRAGMA table_info('{tbl}')").fetchall()
+                }
+                return all(c.lower() in cols_set for c in cols)
+
+            index_specs = []
+            if 'all_player_ticks_mat' in mats:
+                if has('all_player_ticks_mat', ['name']):
+                    index_specs.append((
+                        'idx_apt_name', 'all_player_ticks_mat', ['name']
+                    ))
+                if has('all_player_ticks_mat', ['m_iTeamNum']):
+                    index_specs.append((
+                        'idx_apt_team', 'all_player_ticks_mat', ['m_iTeamNum']
+                    ))
+                if has('all_player_ticks_mat', ['tick']):
+                    index_specs.append((
+                        'idx_apt_tick', 'all_player_ticks_mat', ['tick']
+                    ))
+                if has('all_player_ticks_mat', ['demo_name']):
+                    index_specs.append((
+                        'idx_apt_demo', 'all_player_ticks_mat', ['demo_name']
+                    ))
+                if has('all_player_ticks_mat', ['X','Y']):
+                    index_specs.append((
+                        'idx_apt_xy', 'all_player_ticks_mat', ['X','Y']
+                    ))
+
+            if 'all_grenades_mat' in mats:
+                if has('all_grenades_mat', ['name']):
+                    index_specs.append(('idx_ag_name','all_grenades_mat',['name']))
+                if has('all_grenades_mat', ['grenade_type']):
+                    index_specs.append(('idx_ag_type','all_grenades_mat',['grenade_type']))
+                if has('all_grenades_mat', ['tick']):
+                    index_specs.append(('idx_ag_tick','all_grenades_mat',['tick']))
+                if has('all_grenades_mat', ['x','y']):
+                    index_specs.append(('idx_ag_xy','all_grenades_mat',['x','y']))
+
+            if 'all_player_info_mat' in mats:
+                for spec in [('idx_api_name',['name']), ('idx_api_sid',['steamid']), ('idx_api_demo',['demo_name'])]:
+                    cols = spec[1]
+                    if has('all_player_info_mat', cols):
+                        index_specs.append((spec[0],'all_player_info_mat',cols))
+
+            for idx_name, tbl, cols in index_specs:
+                cols_list = ", ".join(cols)
+                query = f"CREATE INDEX IF NOT EXISTS {idx_name} ON {tbl}({cols_list})"
                 try:
                     self.conn.execute(query)
-                    logger.debug(f"Created index: {query.split('ON')[1] if 'ON' in query else query}")
+                    logger.debug(f"Created index {idx_name} on {tbl}({cols_list})")
                 except Exception as e:
-                    logger.warning(f"Failed to create index: {str(e)}")
-                    
-            logger.info("Performance indexes created successfully")
-            
+                    logger.warning(f"Failed to create index {idx_name}: {e}")
+            logger.info("Index creation complete")
         except Exception as e:
-            logger.warning(f"Failed to create some indexes: {str(e)}")
+            logger.warning(f"Index creation failed: {e}")
     
     def _create_optimized_views(self):
         """Create views with performance optimizations."""

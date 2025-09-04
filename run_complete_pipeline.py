@@ -7,11 +7,17 @@ from start to finish. It handles data parsing, optimization, and strategic analy
 
 Usage:
     python run_complete_pipeline.py [--clean] [--full-analysis] [--skip-parsing]
+                                    [--workers N] [--tick-sample M]
+                                    [--events CSV] [--log-level LEVEL]
 
 Options:
     --clean          : Remove all existing data before starting (clean run)
     --full-analysis  : Use full data for analysis instead of sampled (slower)
     --skip-parsing   : Skip demo parsing if parquet files already exist
+    --workers N      : Number of parallel workers for parsing (default: CPU-1)
+    --tick-sample M  : Modulo for tick sampling (e.g., 64)
+    --events CSV     : Comma-separated list of events to parse
+    --log-level      : Logging level for parsing (DEBUG/INFO/WARNING/ERROR)
 """
 
 import argparse
@@ -53,7 +59,7 @@ def clean_previous_data():
     
     logger.info("🧹 Cleanup complete")
 
-def run_demo_parsing():
+def run_demo_parsing(workers: int = None, tick_sample: int = None, events: str = None, log_level: str = "INFO"):
     """Parse demo files and create parquet data"""
     logger.info("🎮 Starting demo parsing...")
     start_time = time.time()
@@ -61,10 +67,27 @@ def run_demo_parsing():
     import subprocess
     import sys
     
+    cmd = [
+        sys.executable, "pipeline.py", "run",
+        "--log-level", str(log_level),
+    ]
+    if workers is not None:
+        cmd += ["--workers", str(workers)]
+    if tick_sample is not None:
+        cmd += ["--tick-sample", str(tick_sample)]
+    if events:
+        cmd += ["--events", str(events)]
+
+    env = os.environ.copy()
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUTF8", "1")
     result = subprocess.run(
-        [sys.executable, "pipeline.py"],
+        cmd,
         capture_output=True,
-        text=True
+        text=True,
+        env=env,
+        encoding="utf-8",
+        errors="replace",
     )
     
     elapsed = time.time() - start_time
@@ -77,32 +100,45 @@ def run_demo_parsing():
         logger.error(result.stderr)
         return False
 
-def run_strategic_analysis(use_full_data=False):
-    """Run strategic analysis"""
+def run_strategic_analysis(use_full_data=False, materialize=False):
+    """Run strategic analysis in a subprocess to avoid console encoding issues."""
     mode = "full" if use_full_data else "sampled"
     logger.info(f"📊 Starting strategic analysis (mode: {mode})...")
     start_time = time.time()
-    
+
+    import subprocess, sys
+
+    # Build a small driver that toggles sampling if requested
+    pycode = (
+        "from expert_validation_optimized import ExpertValidationAnalyzer; "
+        "v=ExpertValidationAnalyzer(); "
+        + ("v.toggle_sampling(False); " if use_full_data else "")
+        + "v.run_all_analyses(); v.close()"
+    )
+
+    env = os.environ.copy()
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUTF8", "1")
+    if materialize:
+        env["SF_MATERIALIZE"] = "1"
+
     try:
-        from expert_validation_optimized import CSGOStrategicValidator
-        
-        # Initialize validator
-        validator = CSGOStrategicValidator()
-        
-        # Set analysis mode
-        if use_full_data:
-            validator.toggle_sampling(False)
-        
-        # Run all analyses
-        validator.run_all_analyses()
-        
-        # Close connection
-        validator.close()
-        
+        result = subprocess.run(
+            [sys.executable, "-c", pycode],
+            capture_output=True,
+            text=True,
+            env=env,
+            encoding="utf-8",
+            errors="replace",
+        )
+
         elapsed = time.time() - start_time
-        logger.info(f"📊 Strategic analysis completed successfully ({elapsed:.1f}s)")
-        return True
-        
+        if result.returncode == 0:
+            logger.info(f"📊 Strategic analysis completed successfully ({elapsed:.1f}s)")
+            return True
+        else:
+            logger.error(f"📊 Strategic analysis failed after {elapsed:.1f}s: {result.stderr.strip()}")
+            return False
     except Exception as e:
         elapsed = time.time() - start_time
         logger.error(f"📊 Strategic analysis failed after {elapsed:.1f}s: {e}")
@@ -154,6 +190,37 @@ def main():
         action="store_true",
         help="Skip demo parsing if parquet files already exist"
     )
+
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of parallel workers for parsing (default: CPU-1)"
+    )
+    parser.add_argument(
+        "--tick-sample",
+        type=int,
+        dest="tick_sample",
+        default=None,
+        help="Modulo for tick sampling (e.g., 64)"
+    )
+    parser.add_argument(
+        "--events",
+        type=str,
+        default=None,
+        help="Comma-separated list of events to parse"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help="Logging level passed to parsing step (DEBUG/INFO/WARNING/ERROR)"
+    )
+    parser.add_argument(
+        "--materialize-analysis",
+        action="store_true",
+        help="Materialize unified views into indexed base tables for analysis"
+    )
     
     args = parser.parse_args()
     
@@ -175,12 +242,12 @@ def main():
     if args.skip_parsing and parquet_complete:
         logger.info("⏭️ Skipping demo parsing (--skip-parsing enabled)")
     else:
-        if not run_demo_parsing():
+        if not run_demo_parsing(workers=args.workers, tick_sample=args.tick_sample, events=args.events, log_level=args.log_level):
             logger.error("❌ Pipeline failed at demo parsing stage")
             return 1
     
     # Step 4: Run strategic analysis
-    if not run_strategic_analysis(use_full_data=args.full_analysis):
+    if not run_strategic_analysis(use_full_data=args.full_analysis, materialize=args.materialize_analysis):
         logger.error("❌ Pipeline failed at strategic analysis stage")
         return 1
     
