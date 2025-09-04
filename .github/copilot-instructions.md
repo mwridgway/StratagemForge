@@ -7,7 +7,7 @@ This file contains specific instructions and preferences for generating and modi
 ---
 
 ## 🎯 Current Project Context
-- **Project**: CS:GO/CS2 Demo Analysis Tool
+- **Project**: CS2/CS2 Demo Analysis Tool
 - **Tech Stack**: Python, DuckDB, demoparser2, pandas, pyarrow
 - **Purpose**: Strategic analysis of professional CS matches for team preparation
 
@@ -66,7 +66,7 @@ HAVING COUNT(*) >= 100
 
 ---
 
-## 🎮 CS:GO/CS2 Domain Knowledge
+## 🎮 CS2/CS2 Domain Knowledge
 
 ### **Strategic Analysis Priorities**
 1. **Player positioning and movement patterns**

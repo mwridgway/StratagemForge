@@ -1,6 +1,6 @@
 """
 Performance Optimization Summary
-CS:GO Demo Analysis Pipeline
+CS2 Demo Analysis Pipeline
 """
 
 import time
@@ -8,7 +8,7 @@ from duckdb_connector_optimized import CSGODataAnalyzer
 
 def benchmark_optimizations():
     """Benchmark the optimized performance."""
-    print("🚀 CS:GO Analysis Performance Optimization Summary")
+    print("🚀 CS2 Analysis Performance Optimization Summary")
     print("=" * 80)
     
     analyzer = CSGODataAnalyzer()

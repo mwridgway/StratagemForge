@@ -106,7 +106,7 @@ class ExpertValidationAnalyzer:
     def run_player_role_analysis(self):
         """Analyze player positioning and role patterns with optimizations."""
         self.print_section_header("Player Role & Positioning Intelligence")
-        
+
         table_name = 'all_player_ticks_sampled' if self.use_sampling else 'all_player_ticks'
         
         # Question 3: Player Mobility Patterns (Optimized with sampling)
@@ -130,26 +130,42 @@ class ExpertValidationAnalyzer:
         result, exec_time = self.execute_query(query)
         self.print_answer(result, "Higher mobility = roaming/entry fraggers, Lower = anchors/supports", exec_time)
         
-        # Question 4: Player Health Distribution (Optimized)
+        # Question 4: Player Health Distribution (Optimized, with schema guard)
         self.print_question(4, "How do different players manage risk based on their health patterns?")
-        query = f"""
-        SELECT 
-            name,
-            ROUND(AVG(m_iHealth), 1) as avg_health,
-            ROUND(STDDEV(m_iHealth), 1) as health_variance,
-            COUNT(CASE WHEN m_iHealth <= 30 THEN 1 END) as low_health_instances,
-            COUNT(CASE WHEN m_iHealth >= 80 THEN 1 END) as high_health_instances,
-            COUNT(*) as total_observations,
-            ROUND(COUNT(CASE WHEN m_iHealth <= 30 THEN 1 END) * 100.0 / COUNT(*), 1) as risk_percentage
-        FROM {table_name}
-        WHERE name IS NOT NULL AND name != '' AND m_iHealth > 0
-        GROUP BY name
-        HAVING total_observations >= 100
-        ORDER BY risk_percentage DESC
-        LIMIT 15
-        """
-        result, exec_time = self.execute_query(query)
-        self.print_answer(result, "Higher risk% = aggressive players, Lower = conservative/support players", exec_time)
+
+        # Check if m_iHealth exists in the chosen table; fallback gracefully if not
+        try:
+            schema_df, _ = self.execute_query(f"DESCRIBE {table_name}")
+            cols = set(schema_df['column_name'].str.lower().tolist()) if 'column_name' in schema_df.columns else set()
+        except Exception:
+            cols = set()
+
+        if 'm_ihealth' in cols:
+            query = f"""
+            SELECT 
+                name,
+                ROUND(AVG(m_iHealth), 1) as avg_health,
+                ROUND(STDDEV(m_iHealth), 1) as health_variance,
+                COUNT(CASE WHEN m_iHealth <= 30 THEN 1 END) as low_health_instances,
+                COUNT(CASE WHEN m_iHealth >= 80 THEN 1 END) as high_health_instances,
+                COUNT(*) as total_observations,
+                ROUND(COUNT(CASE WHEN m_iHealth <= 30 THEN 1 END) * 100.0 / COUNT(*), 1) as risk_percentage
+            FROM {table_name}
+            WHERE name IS NOT NULL AND name != '' AND m_iHealth > 0
+            GROUP BY name
+            HAVING total_observations >= 100
+            ORDER BY risk_percentage DESC
+            LIMIT 15
+            """
+            result, exec_time = self.execute_query(query)
+            self.print_answer(result, "Higher risk% = aggressive players, Lower = conservative/support players", exec_time)
+        else:
+            # Fallback: report that health is unavailable and skip
+            fallback_msg = (
+                "Health (m_iHealth) not present in ticks data. Skipping risk analysis. "
+                "Ensure pipeline includes 'm_iHealth' in player tick properties."
+            )
+            self.print_answer(pd.DataFrame(), fallback_msg, 0.0)
         
     def run_utility_analysis(self):
         """Analyze utility usage patterns with optimizations."""
@@ -232,7 +248,7 @@ class ExpertValidationAnalyzer:
         """Run all strategic analyses with performance optimizations."""
         start_time = time.time()
         
-        print("🚀 Starting CS:GO Strategic Analysis (Performance Optimized)")
+        print("🚀 Starting CS2 Strategic Analysis (Performance Optimized)")
         print(f"📊 Mode: {'FAST - Using sampled data for performance' if self.use_sampling else 'FULL - Using all data (slower)'}")
         
         try:
@@ -273,7 +289,7 @@ def main():
     
     try:
         # Start with fast analysis by default
-        print("🚀 Starting CS:GO Expert Validation Analysis")
+        print("🚀 Starting CS2 Expert Validation Analysis")
         print("🔧 Performance Mode: FAST (using sampled data)")
         print("💡 For full analysis, use: validator.run_all_analyses_full()")
         

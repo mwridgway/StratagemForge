@@ -1,6 +1,6 @@
-# CS:GO Demo Data Analysis with DuckDB
+# CS2 Demo Data Analysis with DuckDB
 
-This repository contains tools to parse CS:GO demo files and analyze them using DuckDB for efficient SQL-based analysis.
+This repository contains tools to parse CS2 demo files and analyze them using DuckDB for efficient SQL-based analysis.
 
 ## Development & Agent Guidelines
 

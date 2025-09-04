@@ -1,4 +1,4 @@
-# CS:GO Demo Analysis Setup - Summary
+# CS2 Demo Analysis Setup - Summary
 
 ## ✅ What's Been Created
 

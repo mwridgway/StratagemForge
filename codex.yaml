@@ -4,7 +4,7 @@ project: StratagemForge
 description: >-
   Centralized agent guidelines for Python best practices and the core
   constraints from .github/copilot-instructions.md, focused on high-performance
-  CS:GO/CS2 demo analysis with DuckDB and pandas.
+  CS2/CS2 demo analysis with DuckDB and pandas.
 
 language: python
 
@@ -94,7 +94,7 @@ targets:
     storage_mb_max: 500
 
 domain:
-  game: CS:GO/CS2
+  game: CS2/CS2
   priorities:
     - "Player positioning and movement patterns"
     - "Team coordination and formations"

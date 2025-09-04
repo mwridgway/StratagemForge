@@ -80,6 +80,49 @@ def optimize_datatypes(df: pd.DataFrame, data_type: str) -> pd.DataFrame:
     return df
 
 
+def _coerce_to_dataframe(obj) -> Optional[pd.DataFrame]:
+    """Best-effort conversion of various demoparser2 parse outputs to a DataFrame.
+
+    Handles cases where parse methods may return:
+    - a DataFrame
+    - a list of DataFrames
+    - a list/tuple/dict nesting DataFrames (e.g., (event_name, df))
+    - empty structures
+    """
+    # Direct DataFrame
+    if isinstance(obj, pd.DataFrame):
+        return obj
+
+    # Dict: return the first DataFrame we can find
+    if isinstance(obj, dict):
+        for v in obj.values():
+            df = _coerce_to_dataframe(v)
+            if isinstance(df, pd.DataFrame):
+                return df
+        return None
+
+    # Tuple: search elements for a DataFrame
+    if isinstance(obj, tuple):
+        for item in obj:
+            df = _coerce_to_dataframe(item)
+            if isinstance(df, pd.DataFrame):
+                return df
+        return None
+
+    # List: gather all nested DataFrames and concatenate
+    if isinstance(obj, list):
+        dfs: List[pd.DataFrame] = []
+        for item in obj:
+            df = _coerce_to_dataframe(item)
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                dfs.append(df)
+        if dfs:
+            return pd.concat(dfs, ignore_index=True)
+        return None
+
+    return None
+
+
 def _safe_write_parquet(df: pd.DataFrame, output_file: Path) -> None:
     """Write to a temp file and move into place atomically; prefer pyarrow."""
     tmp_path = output_file.with_suffix(output_file.suffix + '.tmp')
@@ -135,14 +178,12 @@ def _process_single_demo(demo_file: Path, parquet_folder: Path, common_events: L
         try:
             parse_start_time = time.time()
             logger.info(f"  Parsing {data_type}...")
-            data = parse_method()
-
-            if isinstance(data, list) and len(data) > 0:
-                data = pd.concat(data, ignore_index=True)
-            elif isinstance(data, list) and len(data) == 0:
+            raw = parse_method()
+            data = _coerce_to_dataframe(raw)
+            if data is None:
                 data = pd.DataFrame()
 
-            if data is not None and not data.empty:
+            if not data.empty:
                 # Optimize dtypes
                 data = optimize_datatypes(data, data_type)
 
@@ -288,7 +329,7 @@ def main():
         events_list = [e.strip() for e in events.split(',')] if events else None
         parse_demo_files(demos_path=demos, parquet_path=out, events=events_list, tick_sample_mod=tick_sample, workers=workers)
 
-    @app.command(name="run", help="Parse CS:GO demos into optimized parquet datasets")
+    @app.command(name="run", help="Parse CS2 demos into optimized parquet datasets")
     def run(
         demos: str = typer.Option("demos", help="Path to demos directory"),
         out: str = typer.Option("parquet", help="Output parquet directory"),

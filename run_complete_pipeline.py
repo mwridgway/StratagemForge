@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Complete CS:GO Demo Analysis Pipeline Runner
+Complete CS2 Demo Analysis Pipeline Runner
 
-This script provides a simple way to run the entire CS:GO demo analysis pipeline
+This script provides a simple way to run the entire CS2 demo analysis pipeline
 from start to finish. It handles data parsing, optimization, and strategic analysis.
 
 Usage:
@@ -168,7 +168,7 @@ def check_data_availability():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run complete CS:GO demo analysis pipeline",
+        description="Run complete CS2 demo analysis pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
@@ -224,7 +224,7 @@ def main():
     
     args = parser.parse_args()
     
-    logger.info("🚀 CS:GO Demo Analysis Pipeline")
+    logger.info("🚀 CS2 Demo Analysis Pipeline")
     logger.info("=" * 50)
     
     pipeline_start = time.time()

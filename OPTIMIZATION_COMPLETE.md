@@ -1,8 +1,8 @@
-# 🚀 CS:GO Analysis Pipeline - Performance Optimization Complete
+# 🚀 CS2 Analysis Pipeline - Performance Optimization Complete
 
 ## Summary of Achievements
 
-We successfully applied comprehensive performance optimizations to the CS:GO demo analysis pipeline, achieving **>15x performance improvement** and resolving all timeout issues.
+We successfully applied comprehensive performance optimizations to the CS2 demo analysis pipeline, achieving **>15x performance improvement** and resolving all timeout issues.
 
 ---
 
@@ -144,7 +144,7 @@ The optimized pipeline now supports:
 
 ## 🚀 Ready for Production
 
-The CS:GO analysis pipeline is now **production-ready** with:
+The CS2 analysis pipeline is now **production-ready** with:
 
 ✅ **Professional performance** (<4s for comprehensive strategic analysis)
 ✅ **Scalable architecture** (supports both fast and comprehensive modes)  

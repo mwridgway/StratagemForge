@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class CSGODataAnalyzer:
     """
-    A class to provide DuckDB connection and analysis capabilities for CS:GO demo data.
+    A class to provide DuckDB connection and analysis capabilities for CS2 demo data.
     Optimized for performance with caching and indexing.
     """
     

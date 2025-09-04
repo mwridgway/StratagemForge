@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class CSGODataAnalyzer:
     """
-    A class to provide DuckDB connection and analysis capabilities for CS:GO demo data.
+    A class to provide DuckDB connection and analysis capabilities for CS2 demo data.
     Optimized for performance with caching and indexing.
     """
     
@@ -442,7 +442,7 @@ class CSGODataAnalyzer:
     
     def print_available_data(self):
         """Print information about available data and views."""
-        print("=== CS:GO Demo Data Analysis ===\n")
+        print("=== CS2 Demo Data Analysis ===\n")
         
         print("Available Demos:")
         for demo in self.demos:
