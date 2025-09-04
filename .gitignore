@@ -7,3 +7,6 @@ __pycache__/*
 *.db
 test.db
 sf.duckdb.wal
+parquet/*
+.gitignore
+*.csv
