@@ -1,0 +1,58 @@
+{
+  "map": "de_inferno",
+  "crs": "game_units",
+  "notes": "Fill each polygon with game-unit coordinates (X,Y). Smaller, specific zones should have higher priority.",
+  "zones": [
+    {
+      "name": "A Site",
+      "priority": 5,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Pit",
+      "priority": 10,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Balcony",
+      "priority": 8,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Short",
+      "priority": 7,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Arch Side",
+      "priority": 7,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "CT Spawn",
+      "priority": 6,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Mid",
+      "priority": 6,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Banana",
+      "priority": 6,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "B Site",
+      "priority": 5,
+      "polygon": [[0,0],[0,0],[0,0]]
+    },
+    {
+      "name": "Coffins",
+      "priority": 8,
+      "polygon": [[0,0],[0,0],[0,0]]
+    }
+  ]
+}
+
