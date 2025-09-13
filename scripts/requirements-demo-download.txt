@@ -1,0 +1,15 @@
+# Demo Download Requirements
+# Additional dependencies for HLTV demo downloading
+
+# Core requirement for simple downloader
+requests>=2.31.0
+
+# Optional: For advanced scraping (if you want the full-featured downloader)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Optional: For browser automation
+# selenium>=4.15.0
+
+# Optional: For progress bars
+# tqdm>=4.66.0
