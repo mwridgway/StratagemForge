@@ -13,23 +13,17 @@ This project is designed to be built in distinct, sequential phases. Each phase 
 
 ### Phase 1: The Foundation - Automated Demo Parsing
 
-
 ### Phase 2: The Command Center - Interactive Dashboard
-
 
 ### Phase 3: The AI Analyst - "Query-Your-Demos" with RAG
 
 ### Phase 4: Advanced Insight - GNN for Tactic Classification
 
-
 ### Phase 5: Automation & Expansion - Fine-Tuning for Scouting
-
 
 ## 3\. Setup and Installation
 
-
 ## 4\. Usage
-
 
 ## 5\. Contributing
 
