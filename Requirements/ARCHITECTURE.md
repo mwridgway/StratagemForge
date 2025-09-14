@@ -63,37 +63,30 @@ graph TD
 
 *   **Web Application:**
     *   **Description:** A single-page application (SPA) that provides all user-facing functionality. The frontend is completely decoupled from internal services, communicating only through the BFF.
-    *   **Technology:** Deliberately technology-agnostic to allow experimentation (e.g., React, Vue, Svelte, Angular, or even mobile frameworks like React Native/Flutter).
     *   **Responsibility:** Renders the UI and communicates exclusively with the BFF. Contains no business logic and has no direct access to internal services.
 
 *   **BFF (Backend for Frontend):**
     *   **Description:** A specialized API layer designed specifically for frontend needs. Orchestrates calls to internal services and provides a unified, frontend-optimized interface.
-    *   **Technology:** To be determined. Must support both HTTP and WebSocket protocols (e.g., Node.js/Express with Socket.IO, Python/FastAPI with WebSockets).
     *   **Responsibility:** Provides tailored REST APIs, handles authentication/authorization, manages WebSocket connections, aggregates data from multiple services, and acts as the single point of contact for the frontend.
 
 *   **User Service:**
     *   **Description:** Handles all user-related operations including authentication, authorization, and user profile management.
-    *   **Technology:** To be determined (e.g., Node.js/Express, Python/Django).
     *   **Responsibility:** User authentication, session management, user profiles, and role-based access control (RBAC).
 
 *   **Demo Analysis Service:**
     *   **Description:** Specialized service for performing complex analysis on parsed demo data. Handles analytical queries and generates insights.
-    *   **Technology:** To be determined. Likely optimized for data processing (e.g., Python with pandas/numpy, or a language with strong OLAP support).
     *   **Responsibility:** Executes analytical queries against the OLAP database, generates statistical reports, calculates game metrics, and provides data insights.
 
 *   **Ingestion Service:**
     *   **Description:** An internal service for processing CS:GO demo files. Only accessible through the BFF for security and coordination.
-    *   **Technology:** To be determined. Likely a language with good support for binary file parsing (e.g., Go, C#, or Python with `awpy`).
     *   **Responsibility:** Receives demo files from BFF, parses them, transforms the data, writes results to databases, and reports progress back through the BFF.
 
 *   **Relational DB:**
     *   **Description:** The persistent storage for transactional, general-purpose system data.
-    *   **Technology:** To be determined (e.g., PostgreSQL, SQLite for local development).
     *   **Responsibility:** Stores user accounts, demo metadata (e.g., map, teams, score), user-generated notes, and tags.
 
 *   **Analytical DB (OLAP):**
     *   **Description:** A storage solution optimized for large-scale analytical queries on game tick data.
-    *   **Technology:** Columnar file format (e.g., Apache Parquet) stored on disk.
     *   **Responsibility:** Stores the high-volume, structured data from game ticks for fast and efficient analysis.
 
 ## High-Level Features Mapping
@@ -124,7 +117,7 @@ To enable frontend technology experimentation, the system follows strict API-fir
 *   **RESTful APIs:** All business operations are exposed through well-designed REST endpoints
 *   **No Business Logic in Frontend:** The frontend contains zero business rules - it's purely a presentation layer
 *   **Comprehensive Data Access:** Every piece of data the UI needs is available through API endpoints
-*   **Consistent Response Formats:** All APIs follow the same response structure (JSON with consistent error handling)
+*   **Consistent Response Formats:** All APIs follow the same response structure with consistent error handling
 
 ### Technology-Agnostic Interface
 *   **Standard HTTP/JSON:** Uses universal web standards that work with any frontend framework
@@ -133,7 +126,7 @@ To enable frontend technology experimentation, the system follows strict API-fir
 *   **OpenAPI Documentation:** API endpoints will be documented with OpenAPI/Swagger for easy frontend development
 
 ### Frontend Flexibility Benefits
-*   **Framework Swapping:** Can replace React with Vue, Svelte, Angular, or any other framework without backend changes
+*   **Framework Swapping:** Can replace one frontend framework with another without backend changes
 *   **Multiple Frontends:** Could support web app, mobile app, and desktop app simultaneously
 *   **Development Speed:** Different developers can work on different frontend experiments independently
 *   **Technology Evaluation:** Easy to prototype and compare different frontend approaches
@@ -149,7 +142,7 @@ The system uses a straightforward authentication approach that can easily evolve
 *   **Abstract Auth Interface:** Backend designed to support multiple auth providers
 
 **Phase 2: OAuth Integration (Future)**
-*   **Steam/Google OAuth:** Add providers without changing core architecture
+*   **Third-party OAuth:** Add providers without changing core architecture
 *   **Unified User Model:** User table designed to handle multiple auth sources
 *   **Backwards Compatible:** Existing local accounts continue to work
 
