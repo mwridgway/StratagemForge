@@ -174,6 +174,38 @@ The BFF serves as a specialized API layer that follows these best practices:
 *   **Performance Optimization:** Reduces chatty interfaces and optimizes for frontend needs
 *   **Security:** Internal services protected behind the BFF layer
 
+## Service Contracts & Integration
+
+### API Contract Management
+To ensure services can be replaced with different implementations without breaking the system:
+
+**Contract Documentation:**
+*   **OpenAPI Specifications:** Each service maintains a comprehensive OpenAPI/Swagger specification
+*   **Contract-First Development:** API contracts defined before implementation begins
+*   **Versioning Strategy:** Semantic versioning for all service APIs with backward compatibility
+*   **Contract Repository:** Centralized location for all service API contracts (e.g., `contracts/` directory)
+
+**Service Interface Standards:**
+*   **Standardized Endpoints:** Consistent naming conventions and HTTP methods across all services
+*   **Common Response Formats:** Unified error handling, pagination, and data envelope structures
+*   **Authentication Headers:** Consistent JWT token validation across all internal services
+*   **Health Check Endpoints:** Standard `/health` and `/ready` endpoints for all services
+
+### Integration Testing Strategy
+**Master Integration Test Suite:**
+*   **Contract Testing:** Automated tests that validate each service adheres to its API contract
+*   **End-to-End Workflows:** Tests that exercise complete user journeys across multiple services
+*   **Service Replacement Tests:** Specific tests to verify new service implementations maintain compatibility
+*   **Performance Baselines:** Integration tests that ensure service replacements don't degrade performance
+
+**Testing Implementation:**
+*   **Consumer-Driven Contracts:** Each service consumer defines expectations that producers must meet
+*   **Automated Contract Validation:** CI/CD pipelines automatically validate contract compliance
+*   **Service Virtualization:** Ability to test against mock services during development
+*   **Regression Prevention:** Integration tests prevent breaking changes during service updates
+
+This approach ensures that replacing the User Service from Go to Python (or any similar technology change) can be done confidently without breaking existing functionality.
+
 ## Appendix: Mermaid Shape Reference
 
 This section shows all available Mermaid shapes for future diagram updates.

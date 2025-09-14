@@ -1,0 +1,90 @@
+# podman-compose.yml
+version: "3.8"
+
+services:
+  # Relational DB
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # User Service (Go)
+  user-service:
+    container_name: user-service
+    build:
+      context: ./services/user-service # Assumes a folder structure
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Demo Analysis Service (Python)
+  analysis-service:
+    container_name: analysis-service
+    build:
+      context: ./services/analysis-service
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      # This service will also need access to the analytical data (Parquet files)
+    volumes:
+      - parquet_data:/app/data # Mount a volume for the Parquet files
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Ingestion Service (Go)
+  ingestion-service:
+    container_name: ingestion-service
+    build:
+      context: ./services/ingestion-service
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    volumes:
+      - parquet_data:/app/data # Also needs to write to the Parquet data volume
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # BFF (Node.js/TypeScript)
+  bff:
+    container_name: bff
+    build:
+      context: ./services/bff
+    ports:
+      - "8080:8080" # Expose the BFF to the host machine
+    environment:
+      - USER_SERVICE_URL=http://user-service:8080 # Service discovery!
+      - ANALYSIS_SERVICE_URL=http://analysis-service:8080
+      - INGESTION_SERVICE_URL=http://ingestion-service:8080
+    depends_on:
+      - user-service
+      - analysis-service
+      - ingestion-service
+    restart: unless-stopped
+
+  # Web Application (React/Next.js) - For local dev, often run outside of compose
+  # But we can define it for a fully containerized setup.
+  web-app:
+    container_name: web-app
+    build:
+      context: ./services/web-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BFF_URL=http://localhost:8080 # The BFF URL as seen by the user's browser
+    depends_on:
+      - bff
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  parquet_data:
