@@ -1,0 +1,7 @@
+{
+    "chat.emptyState.history.enabled": true,
+    "chat.mcp.autostart": "newAndOutdated",
+    "chat.mcp.discovery.enabled": {
+        "claude-desktop": true
+    }
+}
