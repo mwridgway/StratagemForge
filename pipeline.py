@@ -171,8 +171,9 @@ def _process_single_demo(demo_file: Path, parquet_folder: Path, common_events: L
     for event in events_to_parse:
         data_to_parse[f'event_{event}'] = lambda e=event: parser.parse_events([e])
 
-    demo_output_folder = parquet_folder / demo_name
-    demo_output_folder.mkdir(exist_ok=True)
+    # Create match_id partitioned structure: match_id=<demo_name>/data_type/file.parquet
+    match_id_folder = parquet_folder / f"match_id={demo_name}"
+    match_id_folder.mkdir(exist_ok=True)
 
     for data_type, parse_method in data_to_parse.items():
         try:
@@ -184,6 +185,9 @@ def _process_single_demo(demo_file: Path, parquet_folder: Path, common_events: L
                 data = pd.DataFrame()
 
             if not data.empty:
+                # Add match_id column for CS2 economy pipeline compatibility
+                data['match_id'] = demo_name
+                
                 # Optimize dtypes
                 data = optimize_datatypes(data, data_type)
 
@@ -194,7 +198,10 @@ def _process_single_demo(demo_file: Path, parquet_folder: Path, common_events: L
                     after = len(data)
                     logger.info(f"  Applied tick sampling mod {tick_sample_mod}: {before:,} -> {after:,} rows")
 
-                output_file = demo_output_folder / f"{data_type}.parquet"
+                # Create data type subfolder
+                data_type_folder = match_id_folder / data_type
+                data_type_folder.mkdir(exist_ok=True)
+                output_file = data_type_folder / f"{data_type}.parquet"
 
                 write_start = time.time()
                 _safe_write_parquet(data, output_file)
