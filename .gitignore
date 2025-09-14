@@ -1,9 +1,0 @@
-.venv/*
-demos/*
-*/__pycache__/*
-maps/*
-__pycache__/*
-*.duckdb
-*.db
-test.db
-sf.duckdb.wal
