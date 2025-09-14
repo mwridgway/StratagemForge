@@ -38,39 +38,53 @@ graph TD
     end
 
     subgraph "StratagemForge System"
-        B[Backend Service]
-        C[Ingestion Service]
-        D[(Relational DB)]
-        E[(Analytical DB OLAP)]
+        B[BFF - Backend for Frontend]
+        C[User Service]
+        D[Demo Analysis Service]
+        E[Ingestion Service]
+        F[(Relational DB)]
+        G[(Analytical DB OLAP)]
     end
 
     A -->|API calls & WebSocket| B
     
-    B -->|Demo upload requests| C
-    B -->|Metadata| D
-    B -->|Queries| E
-
-    C -->|Parsed data| E
-    C -->|Metadata| D
-    C -->|Progress updates| B
+    B -->|User operations| C
+    B -->|Analysis requests| D
+    B -->|Demo upload requests| E
+    
+    C -->|User data| F
+    D -->|Queries| G
+    D -->|Metadata| F
+    E -->|Parsed data| G
+    E -->|Metadata| F
 ```
 
 ### Containers
 
 *   **Web Application:**
-    *   **Description:** A single-page application (SPA) that provides all user-facing functionality. The frontend is completely decoupled from the backend, communicating only through the Backend Service via well-defined REST APIs and WebSocket connections.
+    *   **Description:** A single-page application (SPA) that provides all user-facing functionality. The frontend is completely decoupled from internal services, communicating only through the BFF.
     *   **Technology:** Deliberately technology-agnostic to allow experimentation (e.g., React, Vue, Svelte, Angular, or even mobile frameworks like React Native/Flutter).
-    *   **Responsibility:** Renders the UI and communicates exclusively with the Backend Service. Contains no business logic and has no direct access to other internal services.
+    *   **Responsibility:** Renders the UI and communicates exclusively with the BFF. Contains no business logic and has no direct access to internal services.
 
-*   **Backend Service:**
-    *   **Description:** A unified service that provides both REST API endpoints and WebSocket connections. Acts as the single entry point for all user interactions and mediates access to internal services.
-    *   **Technology:** To be determined. Must support both HTTP and WebSocket protocols (e.g., Node.js/Express with Socket.IO, Python/FastAPI with WebSockets, or ASP.NET Core).
-    *   **Responsibility:** Provides complete REST API, handles authentication/authorization, manages WebSocket connections for real-time updates, orchestrates demo uploads with the Ingestion Service, and controls access to all internal services.
+*   **BFF (Backend for Frontend):**
+    *   **Description:** A specialized API layer designed specifically for frontend needs. Orchestrates calls to internal services and provides a unified, frontend-optimized interface.
+    *   **Technology:** To be determined. Must support both HTTP and WebSocket protocols (e.g., Node.js/Express with Socket.IO, Python/FastAPI with WebSockets).
+    *   **Responsibility:** Provides tailored REST APIs, handles authentication/authorization, manages WebSocket connections, aggregates data from multiple services, and acts as the single point of contact for the frontend.
+
+*   **User Service:**
+    *   **Description:** Handles all user-related operations including authentication, authorization, and user profile management.
+    *   **Technology:** To be determined (e.g., Node.js/Express, Python/Django).
+    *   **Responsibility:** User authentication, session management, user profiles, and role-based access control (RBAC).
+
+*   **Demo Analysis Service:**
+    *   **Description:** Specialized service for performing complex analysis on parsed demo data. Handles analytical queries and generates insights.
+    *   **Technology:** To be determined. Likely optimized for data processing (e.g., Python with pandas/numpy, or a language with strong OLAP support).
+    *   **Responsibility:** Executes analytical queries against the OLAP database, generates statistical reports, calculates game metrics, and provides data insights.
 
 *   **Ingestion Service:**
-    *   **Description:** An internal service for processing CS:GO demo files. This service is not directly accessible to users and only communicates with the Backend Service.
+    *   **Description:** An internal service for processing CS:GO demo files. Only accessible through the BFF for security and coordination.
     *   **Technology:** To be determined. Likely a language with good support for binary file parsing (e.g., Go, C#, or Python with `awpy`).
-    *   **Responsibility:** Receives demo files from Backend Service, parses them, transforms the data, writes results to appropriate databases, and reports progress back to Backend Service via API calls.
+    *   **Responsibility:** Receives demo files from BFF, parses them, transforms the data, writes results to databases, and reports progress back through the BFF.
 
 *   **Relational DB:**
     *   **Description:** The persistent storage for transactional, general-purpose system data.
@@ -86,13 +100,13 @@ graph TD
 
 This section maps the primary features to the containers that will implement them.
 
-| Feature                  | Web App | Backend Service | Ingestion Service | Relational DB | Analytical DB |
-| ------------------------ | :-----: | :-------------: | :---------------: | :-----------: | :-----------: |
-| **User Authentication**  |    X    |        X        |                   |       X       |               |
-| **Game/Demo Management** |    X    |        X        |                   |       X       |               |
-| **Manual Demo Upload**   |    X    |        X        |         X         |       X       |       X       |
-| **Data Analysis/Queries**|    X    |        X        |                   |               |       X       |
-| **Real-time Updates**    |    X    |        X        |         X         |               |               |
+| Feature                  | Web App | BFF | User Service | Demo Analysis Service | Ingestion Service | Relational DB | Analytical DB |
+| ------------------------ | :-----: | :-: | :----------: | :-------------------: | :---------------: | :-----------: | :-----------: |
+| **User Authentication**  |    X    |  X  |      X       |                       |                   |       X       |               |
+| **Game/Demo Management** |    X    |  X  |              |           X           |                   |       X       |               |
+| **Manual Demo Upload**   |    X    |  X  |              |                       |         X         |       X       |       X       |
+| **Data Analysis/Queries**|    X    |  X  |              |           X           |                   |               |       X       |
+| **Real-time Updates**    |    X    |  X  |              |           X           |         X         |               |               |
 
 ## Service Communication Security
 
@@ -123,6 +137,49 @@ To enable frontend technology experimentation, the system follows strict API-fir
 *   **Multiple Frontends:** Could support web app, mobile app, and desktop app simultaneously
 *   **Development Speed:** Different developers can work on different frontend experiments independently
 *   **Technology Evaluation:** Easy to prototype and compare different frontend approaches
+
+## Authentication Strategy
+
+### Simple OAuth-Ready Design
+The system uses a straightforward authentication approach that can easily evolve:
+
+**Phase 1: Basic Implementation**
+*   **Local Authentication:** Simple username/password stored in Relational DB
+*   **JWT Tokens:** Stateless session management that works with any auth method
+*   **Abstract Auth Interface:** Backend designed to support multiple auth providers
+
+**Phase 2: OAuth Integration (Future)**
+*   **Steam/Google OAuth:** Add providers without changing core architecture
+*   **Unified User Model:** User table designed to handle multiple auth sources
+*   **Backwards Compatible:** Existing local accounts continue to work
+
+**Key Principle:** Frontend only knows about JWT tokens, never about the authentication method used to obtain them.
+
+## Backend for Frontend (BFF) Pattern
+
+### BFF Design Principles
+The BFF serves as a specialized API layer that follows these best practices:
+
+**Frontend-Optimized APIs:**
+*   **Aggregated Responses:** Combines data from multiple services into single API calls tailored for specific UI screens
+*   **Reduced Network Calls:** Minimizes round-trips by providing exactly the data the frontend needs
+*   **Frontend-Friendly Formats:** Transforms backend data into structures optimized for UI consumption
+
+**Service Orchestration:**
+*   **Centralized Coordination:** Manages complex workflows across multiple backend services
+*   **Error Handling:** Provides consistent error responses and graceful degradation
+*   **Transaction Management:** Coordinates operations that span multiple services
+
+**Security & Authentication:**
+*   **Single Point of Authentication:** All user requests authenticated at the BFF level
+*   **Service-to-Service Security:** Manages secure communication with internal services
+*   **Authorization Layer:** Implements RBAC and access control before forwarding requests
+
+### Benefits of This Approach
+*   **Clean Separation:** Frontend completely isolated from internal service complexity
+*   **Independent Evolution:** Backend services can change without affecting frontend
+*   **Performance Optimization:** Reduces chatty interfaces and optimizes for frontend needs
+*   **Security:** Internal services protected behind the BFF layer
 
 ## Appendix: Mermaid Shape Reference
 
