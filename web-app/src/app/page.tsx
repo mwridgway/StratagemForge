@@ -27,20 +27,6 @@ export default function HomePage() {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        // In development, we'll use placeholder data since services aren't running
-        if (process.env.NODE_ENV === 'development') {
-          setHealth({
-            bff: { status: 'healthy', service: 'bff', version: '1.0.0', uptime: 12345 },
-            services: {
-              userService: { status: 'healthy', service: 'user-service' },
-              ingestionService: { status: 'healthy', service: 'ingestion-service' },
-              analysisService: { status: 'healthy', service: 'analysis-service' }
-            }
-          });
-          setLoading(false);
-          return;
-        }
-
         // Call our internal API route which will proxy to the BFF service
         const response = await fetch('/api/system-status');
         if (!response.ok) {
