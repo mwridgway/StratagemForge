@@ -166,7 +166,7 @@ podman-compose up --build -d
 
 1. Navigate to http://localhost:3000/demos
 2. Click "Upload Demo" 
-3. Select your CS:GO `.dem` files
+3. Select your Counterstrike 2 `.dem` files
 4. Monitor processing status
 
 ### Viewing Analysis

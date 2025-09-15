@@ -98,10 +98,10 @@ export default function HomePage() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
-            CS:GO Demo Analysis Platform
+            Counterstrike 2 Demo Analysis Platform
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Upload, analyze, and gain insights from your CS:GO demo files. 
+            Upload, analyze, and gain insights from your Counterstrike 2 demo files. 
             Track performance, study strategies, and improve your gameplay with advanced analytics.
           </p>
         </div>
@@ -113,7 +113,7 @@ export default function HomePage() {
               <div className="text-4xl mb-4">📁</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Demo Upload</h3>
               <p className="text-gray-600">
-                Upload CS:GO demo files (.dem) for processing and analysis
+                Upload Counterstrike 2 demo files (.dem) for processing and analysis
               </p>
             </div>
           </div>

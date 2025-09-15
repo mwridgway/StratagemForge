@@ -78,7 +78,7 @@ graph TD
     *   **Responsibility:** Executes analytical queries against the OLAP database, generates statistical reports, calculates game metrics, and provides data insights.
 
 *   **Ingestion Service:**
-    *   **Description:** An internal service for processing CS:GO demo files. Only accessible through the BFF for security and coordination.
+    *   **Description:** An internal service for processing Counterstrike 2 demo files. Only accessible through the BFF for security and coordination.
     *   **Responsibility:** Receives demo files from BFF, parses them, transforms the data, writes results to databases, and reports progress back through the BFF.
 
 *   **Relational DB:**

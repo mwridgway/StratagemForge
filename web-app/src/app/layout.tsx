@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'StratagemForge',
-  description: 'CS:GO demo analysis and strategy planning platform',
-  keywords: ['CS:GO', 'Counter-Strike', 'demo analysis', 'gaming', 'esports'],
+  description: 'Counterstrike 2 demo analysis and strategy planning platform',
+  keywords: ['Counterstrike 2', 'Counter-Strike', 'demo analysis', 'gaming', 'esports'],
   authors: [{ name: 'StratagemForge Team' }],
   viewport: 'width=device-width, initial-scale=1',
 };

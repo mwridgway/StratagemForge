@@ -1,6 +1,6 @@
 # Ingestion Service
 
-This is the Ingestion Service for StratagemForge, built with Go and Gin. It handles CS:GO demo file uploads and processing.
+This is the Ingestion Service for StratagemForge, built with Go and Gin. It handles Counterstrike 2 demo file uploads and processing.
 
 ## Features
 

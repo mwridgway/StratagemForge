@@ -149,7 +149,7 @@ This BFF service acts as the central API gateway for the StratagemForge platform
 
 - **Web Application**: Next.js frontend communicates only with BFF
 - **User Service**: Authentication, user management
-- **Ingestion Service**: CS:GO demo file uploads and processing
+- **Ingestion Service**: Counterstrike 2 demo file uploads and processing
 - **Analysis Service**: Demo analysis and statistics generation
 - **Service Discovery**: All backend services accessed via environment variables
 

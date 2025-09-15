@@ -203,7 +203,7 @@ analysis_service = AnalysisService(settings)
 # FastAPI app
 app = FastAPI(
     title="StratagemForge Analysis Service",
-    description="CS:GO demo analysis service using FastAPI and pandas",
+    description="Counterstrike 2 demo analysis service using FastAPI and pandas",
     version="1.0.0"
 )
 
@@ -240,7 +240,7 @@ async def root():
     return {
         "service": "analysis-service",
         "status": "running",
-        "message": "StratagemForge Analysis Service - CS:GO demo analysis using FastAPI and pandas",
+        "message": "StratagemForge Analysis Service - Counterstrike 2 demo analysis using FastAPI and pandas",
         "endpoints": {
             "health": "/health",
             "ready": "/ready", 

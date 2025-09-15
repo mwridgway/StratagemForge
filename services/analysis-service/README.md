@@ -1,11 +1,11 @@
 # Analysis Service
 
-CS:GO demo analysis service built with FastAPI, Polars, and DuckDB.
+Counterstrike 2 demo analysis service built with FastAPI, Polars, and DuckDB.
 
 ## Features
 
 - **Health Checks**: Comprehensive health monitoring with database and filesystem validation
-- **Demo Analysis**: Placeholder analysis engine for CS:GO demo data
+- **Demo Analysis**: Placeholder analysis engine for Counterstrike 2 demo data
 - **Data Management**: Lists and processes parquet files from shared data volume
 - **Service Discovery**: Configurable via environment variables for container orchestration
 

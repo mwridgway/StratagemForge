@@ -1,6 +1,6 @@
 # StratagemForge Web Application
 
-Next.js web application for the StratagemForge CS:GO demo analysis platform.
+Next.js web application for the StratagemForge Counterstrike 2 demo analysis platform.
 
 ## Features
 
@@ -106,7 +106,7 @@ src/
 - Feature showcase
 
 ### Demo Management (`/demos`)
-- Upload CS:GO demo files
+- Upload Counterstrike 2 demo files
 - View uploaded demos
 - Demo file management
 - Processing status
