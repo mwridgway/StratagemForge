@@ -1,5 +1,6 @@
 # Multi-stage Dockerfile for Ingestion Service (Go)
-FROM golang:1.21-alpine AS builder
+# Use Debian-based Go image for building with better dependency support
+FROM golang:1.24-bullseye AS builder
 
 # Set necessary environment variables
 ENV GO111MODULE=on \
@@ -20,7 +21,7 @@ COPY . .
 # Build the application
 RUN go build -a -installsuffix cgo -o main .
 
-# Production stage
+# Production stage - use Alpine for smaller final image
 FROM alpine:3.18
 
 # Install ca-certificates for HTTPS requests
