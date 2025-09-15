@@ -176,6 +176,7 @@ func (is *IngestionService) handleDemoUpload(c *gin.Context) {
 	filepath := filepath.Join(is.config.DataPath, uploadID+"_"+filename)
 
 	// Create the file
+	// TODO: need to clear this out or the pod will run out of space
 	dst, err := os.Create(filepath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

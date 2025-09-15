@@ -45,7 +45,7 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER:-stratagems}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-stratagems_db}?sslmode=disable
       - DATA_PATH=/app/data
     volumes:
-      - parquet_data:/app/data
+      - ./data:/app/data
     depends_on:
       - postgres
     networks:
@@ -64,7 +64,7 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER:-stratagems}:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/${POSTGRES_DB:-stratagems_db}?sslmode=disable
       - DATA_PATH=/app/data
     volumes:
-      - parquet_data:/app/data
+      - ./data:/app/data
     depends_on:
       - postgres
     networks:
@@ -110,7 +110,6 @@ services:
 
 volumes:
   postgres_data:
-  parquet_data:
 
 networks:
   stratagem-network:
