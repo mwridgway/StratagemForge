@@ -476,7 +476,7 @@ func (is *IngestionService) processDemoFile(demoPath, matchID string) (*Processi
 			Round:        int32(gameState.TotalRoundsPlayed()),
 			ScoreTeamA:   int32(gameState.TeamTerrorists().Score()),
 			ScoreTeamB:   int32(gameState.TeamCounterTerrorists().Score()),
-			Phase:        string(gameState.GamePhase()),
+			Phase:        fmt.Sprintf("%v", gameState.GamePhase()),
 			BombPlanted:  false,      // Will be updated by events
 			BombDefused:  false,      // Will be updated by events
 			BombExploded: false,      // Will be updated by events
