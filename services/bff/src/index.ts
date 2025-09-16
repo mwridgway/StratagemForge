@@ -1,4 +1,7 @@
-import fastify, { FastifyInstance } from 'fastify';
+import fastify, { FastifyInstance, FastifyRequest } from 'fastify';
+import axios from 'axios';
+import FormData from 'form-data';
+// import { FastifyMultipartRequest } from '@fastify/multipart';
 
 // Import configuration (simplified for now)
 const config = {
@@ -32,6 +35,13 @@ async function buildApp(): Promise<FastifyInstance> {
   await app.register(require('@fastify/cors'), {
     origin: config.CORS_ORIGIN,
     credentials: true
+  });
+
+  // Register multipart support for file uploads
+  await app.register(require('@fastify/multipart'), {
+    limits: {
+      fileSize: 1024 * 1024 * 1024 // 1GB limit for demo files
+    }
   });
 
   // Root endpoint
@@ -106,6 +116,55 @@ async function buildApp(): Promise<FastifyInstance> {
         service: 'ingestion-service', 
         url: config.INGESTION_SERVICE_URL
       };
+    });
+
+    // Demo upload endpoint
+    fastify.post('/api/demos/upload', async (request: FastifyRequest, reply) => {
+      try {
+        // Use 'any' type assertion for multipart request
+        const data = await (request as any).file();
+        
+        if (!data) {
+          return reply.code(400).send({ error: 'No file uploaded' });
+        }
+        // Validate file type and size
+        const allowedMimeTypes = ['application/zip', 'application/octet-stream', 'application/x-zip-compressed'];
+        const maxFileSize = 1024 * 1024 * 1024; // 1GB
+    
+        if (!allowedMimeTypes.includes(data.mimetype)) {
+          return reply.code(400).send({ error: 'Invalid file type' });
+        }
+    
+        if (data.file.truncated || data.file.length > maxFileSize) {
+          return reply.code(400).send({ error: 'File size exceeds the 1GB limit' });
+        }
+    
+        // Create FormData to forward to ingestion service
+        const formData = new FormData();
+        formData.append('file', data.file, {
+          filename: data.filename,
+          contentType: data.mimetype
+        });
+    
+        // Forward to ingestion service
+        const response = await axios.post(`${config.INGESTION_SERVICE_URL}/upload`, formData, {
+          headers: {
+            ...formData.getHeaders(),
+          },
+          maxContentLength: maxFileSize,
+          maxBodyLength: maxFileSize,
+          timeout: 60000 // 60 seconds
+        });
+    
+        return response.data;
+        return response.data;
+      } catch (error) {
+        console.error('Demo upload error:', error);
+        return reply.code(500).send({ 
+          error: 'Failed to upload demo file',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     });
 
     // Analysis API

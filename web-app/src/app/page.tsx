@@ -82,6 +82,9 @@ export default function HomePage() {
               <Link href="/" className="text-primary-600 hover:text-primary-800">
                 Home
               </Link>
+              <Link href="/upload" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                Upload Demo
+              </Link>
               <Link href="/demos" className="text-gray-600 hover:text-gray-800">
                 Demos
               </Link>
@@ -104,11 +107,22 @@ export default function HomePage() {
             Upload, analyze, and gain insights from your Counterstrike 2 demo files. 
             Track performance, study strategies, and improve your gameplay with advanced analytics.
           </p>
+          <div className="mt-8">
+            <Link 
+              href="/upload" 
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload Your First Demo
+            </Link>
+          </div>
         </div>
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          <div className="card">
+          <Link href="/upload" className="card hover:shadow-lg transition-shadow cursor-pointer">
             <div className="card-body text-center">
               <div className="text-4xl mb-4">📁</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Demo Upload</h3>
@@ -116,7 +130,7 @@ export default function HomePage() {
                 Upload Counterstrike 2 demo files (.dem) for processing and analysis
               </p>
             </div>
-          </div>
+          </Link>
 
           <div className="card">
             <div className="card-body text-center">

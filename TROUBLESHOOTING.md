@@ -7,13 +7,13 @@ This guide helps resolve common build issues when starting StratagemForge servic
 ### 1. Clean Build (Most Common Solution)
 ```bash
 # Stop all services
-podman compose down
+podman-compose down
 
 # Remove all images and rebuild from scratch
-podman compose build --no-cache
+podman-compose build --no-cache
 
 # Start services
-podman compose up
+podman-compose up
 ```
 
 ### 2. Check Podman Status
@@ -96,13 +96,43 @@ go mod download
 go mod tidy
 ```
 
+### Web App (Next.js)
+- **Issue**: Changes not reflected after rebuild, container networking errors
+- **Problem**: Next.js build cache can retain old environment variables and compiled code
+- **Symptoms**: 
+  - `ECONNREFUSED 127.0.0.1:8080` errors when uploading files
+  - Old localhost URLs in compiled JavaScript despite source code changes
+  - Container-to-container communication failures
+
+**Solution**: Force clean rebuild with cache clearing
+```bash
+# Stop all services
+podman-compose down
+
+# Build web-app with no cache
+podman build --no-cache -t stratagemforge_web-app -f ./web-app/Dockerfile ./web-app
+
+# Verify the compiled output contains correct URLs
+podman run --rm stratagemforge_web-app cat /app/.next/server/app/api/demos/upload/route.js | grep -E "(http://|BFF_SERVICE_URL)"
+
+# Should show "http://bff:8080" not "http://localhost:8080"
+
+# Restart all services
+podman-compose up -d
+```
+
+**Prevention**: Always use `--no-cache` flag when rebuilding web-app after environment changes:
+```bash
+podman-compose build --no-cache web-app
+```
+
 ## Development Mode
 
 For faster development, run services individually:
 
 ```bash
 # Start only database
-podman compose up postgres
+podman-compose up postgres
 
 # Run services in development mode
 cd services/user-service
@@ -123,16 +153,16 @@ If builds fail due to dependencies, build in order:
 
 ```bash
 # Build infrastructure first
-podman compose build postgres
+podman-compose build postgres
 
 # Build backend services
-podman compose build user-service
-podman compose build ingestion-service  
-podman compose build analysis-service
+podman-compose build user-service
+podman-compose build ingestion-service  
+podman-compose build analysis-service
 
 # Build frontend services
-podman compose build bff
-podman compose build web-app
+podman-compose build bff
+podman-compose build web-app
 ```
 
 ## Environment Issues
@@ -167,8 +197,8 @@ nano .env     # Linux/macOS
 ### Reduce Concurrent Builds
 ```bash
 # Build one service at a time
-podman compose build user-service
-podman compose build ingestion-service
+podman-compose build user-service
+podman-compose build ingestion-service
 # etc...
 ```
 
@@ -177,8 +207,8 @@ podman compose build ingestion-service
 ### Reset Network
 ```bash
 podman network prune
-podman compose down
-podman compose up
+podman-compose down
+podman-compose up
 ```
 
 ### Check Service Communication
@@ -200,8 +230,8 @@ podman machine stop
 podman machine start
 
 # Rebuild everything
-podman compose build --no-cache
-podman compose up
+podman-compose build --no-cache
+podman-compose up
 ```
 
 ### Individual Service Testing
@@ -214,9 +244,9 @@ podman run -p 8080:8080 test-user-service
 
 ## Getting Help
 
-1. **Check logs**: `podman compose logs [service-name]`
-2. **Verbose output**: `podman compose up --verbose`
-3. **Service status**: `podman compose ps`
+1. **Check logs**: `podman-compose logs [service-name]`
+2. **Verbose output**: `podman-compose up --verbose`
+3. **Service status**: `podman-compose ps`
 4. **Resource usage**: `podman stats`
 
 ## Success Indicators
