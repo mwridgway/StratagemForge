@@ -18,6 +18,7 @@ import (
 	"github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
 	common "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
 	events "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/events"
+	msg "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/msg"
 	"github.com/parquet-go/parquet-go"
 )
 
@@ -558,6 +559,39 @@ func (is *IngestionService) processDemoFile(demoPath, matchID string) (*Processi
 	parser.RegisterEventHandler(func(e events.BombExplode) {
 		if len(ticksData) > 0 {
 			ticksData[len(ticksData)-1].BombExploded = true
+		}
+	})
+
+	// Register net message handler for server info (example usage)
+	parser.RegisterNetMessageHandler(func(m *msg.CSVCMsg_ServerInfo) {
+		if m != nil {
+			// Extract useful server information
+			if m.MapName != nil {
+				mapName = *m.MapName
+				log.Printf("Map name from ServerInfo: %s", mapName)
+			}
+			if m.GameDir != nil {
+				log.Printf("Game directory: %s", *m.GameDir)
+			}
+			if m.TickInterval != nil {
+				log.Printf("Server tick interval: %f", *m.TickInterval)
+			}
+			if m.MaxClients != nil {
+				log.Printf("Max clients: %d", *m.MaxClients)
+			}
+		}
+	})
+
+	// Register net message handler for game event list
+	parser.RegisterNetMessageHandler(func(m *msg.CSVCMsg_GameEventList) {
+		if m != nil && m.Descriptors != nil {
+			log.Printf("Game events available: %d", len(m.Descriptors))
+			// Optionally log specific events of interest
+			for _, desc := range m.Descriptors {
+				if desc.Name != nil && (*desc.Name == "player_death" || *desc.Name == "round_start" || *desc.Name == "round_end") {
+					log.Printf("Found game event: %s (ID: %d)", *desc.Name, desc.GetEventid())
+				}
+			}
 		}
 	})
 
