@@ -222,16 +222,16 @@ earthly bootstrap
 **Step 3: Test Earthly Builds**
 ```bash
 # List available targets
-earthly ls
+.\earthly.exe ls
 
 # Build individual service
-earthly +user-service-build
+.\earthly.exe +user-service-build
 
 # Build all services as containers
-earthly +ci-build
+.\earthly.exe +ci-build
 
 # Run complete CI pipeline
-earthly +ci-full
+.\earthly.exe +ci-full
 ```
 
 **Step 4: Production Deployment**
@@ -245,20 +245,23 @@ earthly +security-scan
 # Deploy to registry
 earthly +deploy-images
 ```
+
+
+
+```bash
+
+# Check all service status
+podman-compose ps
+
+# Test web application
+curl http://localhost:3000
+
+# Test API gateway and see all available endpoints
+curl http://localhost:8090/
+
+# Test API gateway health
+curl http://localhost:8090/health
 ```
-   ```bash
-   # Check all service status
-   podman-compose ps
-   
-   # Test web application
-   curl http://localhost:3000
-   
-   # Test API gateway and see all available endpoints
-   curl http://localhost:8090/
-   
-   # Test API gateway health
-   curl http://localhost:8090/health
-   ```
 
 ### What Gets Started
 
@@ -337,9 +340,10 @@ task services:logs
 Best for: Container-based builds, CI/CD, and multi-platform deployments
 
 **Installation:**
-```bash
-# Install Earthly
-curl -sSL https://github.com/earthly/earthly/releases/latest/download/earthly-windows-amd64.exe -o earthly.exe
+```powershell
+
+iwr https://github.com/earthly/earthly/releases/latest/download/earthly-windows-amd64.exe -OutFile earthly.exe
+
 ```
 
 **Usage:**

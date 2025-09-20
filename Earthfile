@@ -104,7 +104,8 @@ web:
     COPY +web-build/.next ./.next
     COPY web-app/package*.json ./
     COPY web-app/next.config.js ./
-    COPY web-app/public ./public
+    # Copy public directory if it exists (Next.js apps may not have one)
+    COPY --if-exists web-app/public ./public
     EXPOSE 3000
     CMD ["npm", "start"]
     SAVE IMAGE web:latest
@@ -181,16 +182,14 @@ lint-node:
 # Security scanning
 security-scan:
     FROM aquasec/trivy:latest
-    COPY +user-service/user-service:latest ./
-    COPY +ingestion-service/ingestion-service:latest ./
-    COPY +bff/bff:latest ./
-    COPY +web/web:latest ./
-    COPY +analysis-service/analysis-service:latest ./
-    RUN trivy image user-service:latest
-    RUN trivy image ingestion-service:latest
-    RUN trivy image bff:latest
-    RUN trivy image web:latest
-    RUN trivy image analysis-service:latest
+    # Use the built images for scanning
+    WITH DOCKER --load +user-service --load +ingestion-service --load +bff --load +web --load +analysis-service
+        RUN trivy image user-service:latest && \
+            trivy image ingestion-service:latest && \
+            trivy image bff:latest && \
+            trivy image web:latest && \
+            trivy image analysis-service:latest
+    END
 
 # Multi-architecture builds
 all-services-multiarch:
@@ -227,7 +226,7 @@ ci-build:
 ci-full:
     BUILD +ci-test
     BUILD +ci-build
-    BUILD +security-scan
+    # BUILD +security-scan  # Requires --allow-privileged flag
 
 # Production deployment
 deploy-images:
