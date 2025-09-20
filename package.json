@@ -28,6 +28,8 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.55.0",
-    "allure-playwright": "^3.4.1"
+    "@types/node": "^24.5.2",
+    "allure-playwright": "^3.4.1",
+    "eslint": "^9.36.0"
   }
 }

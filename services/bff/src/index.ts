@@ -108,6 +108,90 @@ async function buildApp(): Promise<FastifyInstance> {
     };
   });
 
+  // Service connectivity test endpoint
+  app.get('/test/connectivity', async () => {
+    interface IServiceResult {
+      status: 'connected' | 'failed';
+      url: string;
+      response?: unknown;
+      responseTime?: string;
+      error?: string;
+      code?: string;
+    }
+
+    interface IConnectivityResults {
+      bff: { status: string; timestamp: string };
+      services: Record<string, IServiceResult>;
+    }
+
+    const results: IConnectivityResults = {
+      bff: { status: 'healthy', timestamp: new Date().toISOString() },
+      services: {}
+    };
+
+    // Test ingestion service
+    try {
+      const response = await axios.get(`${config.INGESTION_SERVICE_URL}/health`, {
+        timeout: 5000
+      });
+      results.services.ingestionService = {
+        status: 'connected',
+        url: config.INGESTION_SERVICE_URL,
+        response: response.data,
+        responseTime: response.headers['x-response-time'] || 'unknown'
+      };
+    } catch (error) {
+      results.services.ingestionService = {
+        status: 'failed',
+        url: config.INGESTION_SERVICE_URL,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: axios.isAxiosError(error) ? error.code : 'UNKNOWN'
+      };
+    }
+
+    // Test user service
+    try {
+      const response = await axios.get(`${config.USER_SERVICE_URL}/health`, {
+        timeout: 5000
+      });
+      results.services.userService = {
+        status: 'connected',
+        url: config.USER_SERVICE_URL,
+        response: response.data,
+        responseTime: response.headers['x-response-time'] || 'unknown'
+      };
+    } catch (error) {
+      results.services.userService = {
+        status: 'failed',
+        url: config.USER_SERVICE_URL,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: axios.isAxiosError(error) ? error.code : 'UNKNOWN'
+      };
+    }
+
+    // Test analysis service
+    try {
+      const response = await axios.get(`${config.ANALYSIS_SERVICE_URL}/health`, {
+        timeout: 5000
+      });
+      results.services.analysisService = {
+        status: 'connected',
+        url: config.ANALYSIS_SERVICE_URL,
+        response: response.data,
+        responseTime: response.headers['x-response-time'] || 'unknown'
+      };
+    } catch (error) {
+      results.services.analysisService = {
+        status: 'failed',
+        url: config.ANALYSIS_SERVICE_URL,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: axios.isAxiosError(error) ? error.code : 'UNKNOWN'
+      };
+    }
+
+    return results;
+  });
+
   // API route placeholders
   app.register(async function(fastify) {
     // Users API
@@ -121,11 +205,30 @@ async function buildApp(): Promise<FastifyInstance> {
 
     // Demos API
     fastify.get('/api/demos', async () => {
-      return {
-        message: 'Demos endpoint - will proxy to ingestion-service',
-        service: 'ingestion-service',
-        url: config.INGESTION_SERVICE_URL
-      };
+      try {
+        // Test actual connectivity to ingestion service
+        const response = await axios.get(`${config.INGESTION_SERVICE_URL}/health`, {
+          timeout: 5000
+        });
+
+        return {
+          message: 'Demos endpoint - successfully connected to ingestion service',
+          service: 'ingestion-service',
+          url: config.INGESTION_SERVICE_URL,
+          connectivity: 'SUCCESS',
+          ingestionHealth: response.data,
+          timestamp: new Date().toISOString()
+        };
+      } catch (error) {
+        return {
+          message: 'Demos endpoint - failed to connect to ingestion service',
+          service: 'ingestion-service',
+          url: config.INGESTION_SERVICE_URL,
+          connectivity: 'FAILED',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        };
+      }
     });
 
     // Demo upload endpoint
@@ -171,7 +274,6 @@ async function buildApp(): Promise<FastifyInstance> {
 
         return response.data;
       } catch (error) {
-        console.error('Demo upload error:', error);
         return reply.code(500).send({
           error: 'Failed to upload demo file',
           details: error instanceof Error ? error.message : 'Unknown error'
@@ -209,19 +311,16 @@ async function start(): Promise<void> {
     app.log.info(`   Analysis Service: ${config.ANALYSIS_SERVICE_URL}`);
 
   } catch (error) {
-    console.error('Failed to start BFF service:', error);
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('Received SIGINT, shutting down gracefully...');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
   process.exit(0);
 });
 
