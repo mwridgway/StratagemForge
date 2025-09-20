@@ -1,0 +1,318 @@
+version: '3'
+
+vars:
+  BFF_DIR: services/bff
+  WEB_DIR: web-app
+  USER_SERVICE_DIR: services/user-service
+  INGESTION_SERVICE_DIR: services/ingestion-service
+  ANALYSIS_SERVICE_DIR: services/analysis-service
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  # Development tasks
+  dev:
+    desc: Start development environment with all services
+    deps: [services:start]
+    cmds:
+      - echo "Development environment started"
+
+  dev:bff:
+    desc: Start BFF service in development mode
+    dir: "{{.BFF_DIR}}"
+    cmds:
+      - npm run dev
+
+  dev:web:
+    desc: Start web application in development mode
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - npm run dev
+
+  # Installation tasks
+  install:
+    desc: Install all dependencies
+    cmds:
+      - task: install:root
+      - task: install:bff
+      - task: install:web
+      - task: install:analysis
+
+  install:root:
+    desc: Install root dependencies
+    cmds:
+      - npm install
+
+  install:bff:
+    desc: Install BFF service dependencies
+    dir: "{{.BFF_DIR}}"
+    cmds:
+      - npm install
+
+  install:web:
+    desc: Install web app dependencies
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - npm install
+
+  install:analysis:
+    desc: Install Python analysis service dependencies
+    dir: "{{.ANALYSIS_SERVICE_DIR}}"
+    cmds:
+      - pip install -r requirements.txt
+
+  # Build tasks
+  build:
+    desc: Build all services
+    deps: [build:go-services, build:node-services]
+    cmds:
+      - echo "All services built successfully"
+
+  build:go-services:
+    desc: Build all Go services in parallel
+    deps: [build:user-service, build:ingestion-service]
+
+  build:node-services:
+    desc: Build all Node.js services in parallel
+    deps: [build:bff, build:web]
+
+  build:bff:
+    desc: Build BFF service
+    dir: "{{.BFF_DIR}}"
+    cmds:
+      - npm run build
+
+  build:web:
+    desc: Build web application
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - npm run build
+
+  build:user-service:
+    desc: Build user service
+    dir: "{{.USER_SERVICE_DIR}}"
+    cmds:
+      - go build -o main.exe .
+
+  build:ingestion-service:
+    desc: Build ingestion service
+    dir: "{{.INGESTION_SERVICE_DIR}}"
+    cmds:
+      - go build -o main.exe .
+
+  # Lint tasks
+  lint:
+    desc: Lint all services
+    deps: [lint:bff, lint:web, lint:go-services]
+
+  lint:bff:
+    desc: Lint BFF service
+    dir: "{{.BFF_DIR}}"
+    cmds:
+      - npm run lint
+
+  lint:web:
+    desc: Lint web application
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - npm run lint
+
+  lint:go-services:
+    desc: Lint Go services
+    cmds:
+      - task: lint:user-service
+      - task: lint:ingestion-service
+
+  lint:user-service:
+    desc: Lint user service
+    dir: "{{.USER_SERVICE_DIR}}"
+    cmds:
+      - go fmt ./...
+      - go vet ./...
+
+  lint:ingestion-service:
+    desc: Lint ingestion service
+    dir: "{{.INGESTION_SERVICE_DIR}}"
+    cmds:
+      - go fmt ./...
+      - go vet ./...
+
+  # Test tasks
+  test:
+    desc: Run all tests
+    deps: [test:go-services, test:node-services]
+
+  test:go-services:
+    desc: Test all Go services
+    deps: [test:user-service, test:ingestion-service]
+
+  test:node-services:
+    desc: Test all Node.js services
+    deps: [test:bff, test:web]
+
+  test:bff:
+    desc: Test BFF service
+    dir: "{{.BFF_DIR}}"
+    cmds:
+      - npm test
+    ignore_error: true
+
+  test:web:
+    desc: Test web application
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - npm test
+    ignore_error: true
+
+  test:user-service:
+    desc: Test user service
+    dir: "{{.USER_SERVICE_DIR}}"
+    cmds:
+      - go test ./...
+
+  test:ingestion-service:
+    desc: Test ingestion service
+    dir: "{{.INGESTION_SERVICE_DIR}}"
+    cmds:
+      - go test ./...
+
+  test:e2e:
+    desc: Run end-to-end tests
+    deps: [services:start]
+    cmds:
+      - sleep 5  # Wait for services to be ready
+      - npx playwright test
+
+  # Service management tasks
+  services:start:
+    desc: Start all services with Docker Compose
+    cmds:
+      - podman-compose up -d
+
+  services:stop:
+    desc: Stop all services
+    cmds:
+      - podman-compose down
+
+  services:restart:
+    desc: Restart all services
+    cmds:
+      - task: services:stop
+      - task: services:start
+
+  services:logs:
+    desc: Show logs for all services
+    cmds:
+      - podman-compose logs -f
+
+  services:status:
+    desc: Show status of all services
+    cmds:
+      - podman-compose ps
+
+  # Database tasks
+  db:migrate:
+    desc: Run database migrations
+    deps: [services:start]
+    cmds:
+      - echo "Running database migrations..."
+      - echo "TODO - Implement migration commands"
+
+  db:seed:
+    desc: Seed database with test data
+    deps: [db:migrate]
+    cmds:
+      - echo "Seeding database..."
+      - echo "TODO - Implement seeding commands"
+
+  # Clean tasks
+  clean:
+    desc: Clean all build artifacts
+    cmds:
+      - task: clean:go-services
+      - task: clean:node-services
+
+  clean:go-services:
+    desc: Clean Go build artifacts
+    cmds:
+      - rm -f {{.USER_SERVICE_DIR}}/main.exe
+      - rm -f {{.INGESTION_SERVICE_DIR}}/main.exe
+
+  clean:node-services:
+    desc: Clean Node.js build artifacts
+    cmds:
+      - rm -rf {{.BFF_DIR}}/dist
+      - rm -rf {{.WEB_DIR}}/.next
+      - rm -rf {{.BFF_DIR}}/node_modules
+      - rm -rf {{.WEB_DIR}}/node_modules
+      - rm -rf node_modules
+
+  # CI/CD tasks
+  ci:
+    desc: Run CI pipeline (lint, build, test)
+    cmds:
+      - task: install
+      - task: lint
+      - task: build
+      - task: test
+
+  ci:quick:
+    desc: Run quick CI checks (lint and build only)
+    cmds:
+      - task: lint
+      - task: build
+
+  # Docker tasks
+  docker:build:
+    desc: Build Docker images for all services
+    cmds:
+      - echo "Building Docker images..."
+      - podman-compose build
+
+  docker:push:
+    desc: Push Docker images to registry
+    deps: [docker:build]
+    cmds:
+      - echo "Pushing Docker images..."
+      - echo "TODO - Implement image push commands"
+
+  # Utility tasks
+  format:
+    desc: Format all code
+    cmds:
+      - task: format:go-services
+      - task: format:node-services
+
+  format:go-services:
+    desc: Format Go code
+    cmds:
+      - go fmt ./services/user-service/...
+      - go fmt ./services/ingestion-service/...
+
+  format:node-services:
+    desc: Format Node.js code
+    cmds:
+      - cd {{.BFF_DIR}} && npm run lint -- --fix
+      - cd {{.WEB_DIR}} && npm run lint -- --fix
+
+  deps:update:
+    desc: Update all dependencies
+    cmds:
+      - task: deps:update:go
+      - task: deps:update:node
+
+  deps:update:go:
+    desc: Update Go dependencies
+    cmds:
+      - cd {{.USER_SERVICE_DIR}} && go get -u ./...
+      - cd {{.INGESTION_SERVICE_DIR}} && go get -u ./...
+
+  deps:update:node:
+    desc: Update Node.js dependencies
+    cmds:
+      - npm update
+      - cd {{.BFF_DIR}} && npm update
+      - cd {{.WEB_DIR}} && npm update

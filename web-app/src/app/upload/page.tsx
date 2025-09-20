@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 
-interface UploadResponse {
+interface IUploadResponse {
   id: string;
   filename: string;
   size: number;
@@ -11,14 +11,14 @@ interface UploadResponse {
   message: string;
 }
 
-export default function UploadPage() {
+export default function UploadPage(): React.ReactElement {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [uploadResult, setUploadResult] = useState<IUploadResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     if (!file) {
       setError('No file selected');
@@ -37,7 +37,7 @@ export default function UploadPage() {
     }
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (): Promise<void> => {
     if (!selectedFile) {
       setError('Please select a file first');
       return;
@@ -61,10 +61,10 @@ export default function UploadPage() {
         throw new Error(errorData.error || `Upload failed: ${response.status}`);
       }
 
-      const result: UploadResponse = await response.json();
+      const result: IUploadResponse = await response.json();
       setUploadResult(result);
       setSelectedFile(null);
-      
+
       // Reset the file input using ref
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -76,7 +76,7 @@ export default function UploadPage() {
     }
   };
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -89,8 +89,8 @@ export default function UploadPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-blue-600 hover:text-blue-800 font-medium mb-4 inline-block"
           >
             ← Back to Home

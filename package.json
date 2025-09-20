@@ -1,0 +1,33 @@
+{
+  "name": "stratagemforge",
+  "version": "1.0.0",
+  "description": "AI-Powered Counter-Strike 2 Analytics Platform",
+  "scripts": {
+    "build": "npm run build:bff && npm run build:web",
+    "build:bff": "cd services/bff && npm run build",
+    "build:web": "cd web-app && npm run build",
+    "build:prod": "npm run clean && npm run build",
+    "lint": "npm run lint:bff && npm run lint:web",
+    "lint:bff": "cd services/bff && npm run lint",
+    "lint:web": "cd web-app && npm run lint",
+    "lint:fix": "npm run lint:fix:bff && npm run lint:fix:web",
+    "lint:fix:bff": "cd services/bff && npm run lint:fix",
+    "lint:fix:web": "cd web-app && npm run lint:fix",
+    "type-check": "npm run type-check:bff && npm run type-check:web",
+    "type-check:bff": "cd services/bff && npm run type-check",
+    "type-check:web": "cd web-app && npm run type-check",
+    "test": "npm run test:bff && npm run test:web",
+    "test:bff": "cd services/bff && npm run test",
+    "test:web": "cd web-app && npm run test",
+    "clean": "npm run clean:bff && npm run clean:web",
+    "clean:bff": "cd services/bff && npm run clean",
+    "clean:web": "cd web-app && npm run clean",
+    "ci": "npm run lint && npm run type-check && npm run test && npm run build",
+    "install:all": "npm install && cd services/bff && npm install && cd ../../web-app && npm install"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.0",
+    "allure-playwright": "^3.4.1"
+  }
+}

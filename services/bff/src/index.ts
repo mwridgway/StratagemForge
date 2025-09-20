@@ -1,7 +1,17 @@
-import fastify, { FastifyInstance, FastifyRequest } from 'fastify';
+import fastify, { FastifyInstance } from 'fastify';
 import axios from 'axios';
 import FormData from 'form-data';
-// import { FastifyMultipartRequest } from '@fastify/multipart';
+
+// Extend FastifyRequest to include multipart functionality
+declare module 'fastify' {
+  interface FastifyRequest {
+    file(): Promise<{
+      filename: string;
+      mimetype: string;
+      toBuffer(): Promise<Buffer>;
+    } | undefined>;
+  }
+}
 
 // Import configuration (simplified for now)
 const config = {
@@ -109,43 +119,46 @@ async function buildApp(): Promise<FastifyInstance> {
       };
     });
 
-    // Demos API  
+    // Demos API
     fastify.get('/api/demos', async () => {
       return {
         message: 'Demos endpoint - will proxy to ingestion-service',
-        service: 'ingestion-service', 
+        service: 'ingestion-service',
         url: config.INGESTION_SERVICE_URL
       };
     });
 
     // Demo upload endpoint
-    fastify.post('/api/demos/upload', async (request: FastifyRequest, reply) => {
+    fastify.post('/api/demos/upload', async (request, reply) => {
       try {
-        // Use 'any' type assertion for multipart request
-        const data = await (request as any).file();
-        
+        // Use multipart file() method for file upload
+        const data = await request.file();
+
         if (!data) {
           return reply.code(400).send({ error: 'No file uploaded' });
         }
-        // Validate file type and size
+
+        // Validate file type
         const allowedMimeTypes = ['application/zip', 'application/octet-stream', 'application/x-zip-compressed'];
         const maxFileSize = 1024 * 1024 * 1024; // 1GB
-    
+
         if (!allowedMimeTypes.includes(data.mimetype)) {
           return reply.code(400).send({ error: 'Invalid file type' });
         }
-    
-        if (data.file.truncated || data.file.length > maxFileSize) {
-          return reply.code(400).send({ error: 'File size exceeds the 1GB limit' });
-        }
-    
+
+        // Note: File size validation happens at the plugin level via limits configuration
+        // The file stream will be truncated if it exceeds the configured limit
+
+        // Convert the file stream to buffer for forwarding
+        const buffer = await data.toBuffer();
+
         // Create FormData to forward to ingestion service
         const formData = new FormData();
-        formData.append('file', data.file, {
+        formData.append('file', buffer, {
           filename: data.filename,
           contentType: data.mimetype
         });
-    
+
         // Forward to ingestion service
         const response = await axios.post(`${config.INGESTION_SERVICE_URL}/upload`, formData, {
           headers: {
@@ -155,12 +168,11 @@ async function buildApp(): Promise<FastifyInstance> {
           maxBodyLength: maxFileSize,
           timeout: 60000 // 60 seconds
         });
-    
-        return response.data;
+
         return response.data;
       } catch (error) {
         console.error('Demo upload error:', error);
-        return reply.code(500).send({ 
+        return reply.code(500).send({
           error: 'Failed to upload demo file',
           details: error instanceof Error ? error.message : 'Unknown error'
         });
@@ -181,10 +193,10 @@ async function buildApp(): Promise<FastifyInstance> {
   return app;
 }
 
-async function start() {
+async function start(): Promise<void> {
   try {
     const app = await buildApp();
-    
+
     await app.listen({
       port: config.PORT,
       host: '0.0.0.0'

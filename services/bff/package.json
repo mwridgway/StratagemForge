@@ -4,7 +4,8 @@
   "description": "Backend for Frontend service for StratagemForge - orchestrates microservices for the web application",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run lint && npm run type-check && tsc",
+    "build:prod": "npm run clean && npm run build",
     "dev": "tsx --watch src/index.ts",
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
@@ -13,7 +14,8 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "ci": "npm run lint && npm run type-check && npm run test && npm run build"
   },
   "keywords": [
     "bff",
@@ -36,8 +38,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.8.7",
-    "@typescript-eslint/eslint-plugin": "^6.9.0",
-    "@typescript-eslint/parser": "^6.9.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.52.0",
     "jest": "^29.7.0",
     "@types/jest": "^29.5.6",

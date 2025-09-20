@@ -70,6 +70,74 @@
             "problemMatcher": ["$go"]
         },
         {
+            "label": "lint-bff",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "lint"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/services/bff"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$eslint-stylish"]
+        },
+        {
+            "label": "lint-web",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "lint"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}/web-app"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$eslint-stylish"]
+        },
+        {
+            "label": "lint-all",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "lint"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$eslint-stylish"]
+        },
+        {
+            "label": "build-all-with-lint",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "ci"],
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$eslint-stylish", "$tsc"]
+        },
+        {
             "label": "run-postgres",
             "type": "shell",
             "command": "podman-compose",

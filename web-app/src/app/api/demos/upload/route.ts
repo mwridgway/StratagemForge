@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BFF_URL = process.env.BFF_SERVICE_URL || 'http://bff:8080';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     console.log('Upload route: Using BFF URL:', BFF_URL);
     // Get the form data from the request
     const formData = await request.formData();
-    
+
     // Forward the request to the BFF service
     const response = await fetch(`${BFF_URL}/api/demos/upload`, {
       method: 'POST',
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload proxy error:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to upload demo file',
         details: 'An unexpected error occurred'
       },

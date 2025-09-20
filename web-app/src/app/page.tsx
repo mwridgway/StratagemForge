@@ -1,31 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-interface ServiceHealth {
+interface IServiceHealth {
   status: string;
   service: string;
   version?: string;
   uptime?: number;
 }
 
-interface HealthData {
-  bff: ServiceHealth;
+interface IHealthData {
+  bff: IServiceHealth;
   services: {
-    userService: ServiceHealth;
-    ingestionService: ServiceHealth;
-    analysisService: ServiceHealth;
+    userService: IServiceHealth;
+    ingestionService: IServiceHealth;
+    analysisService: IServiceHealth;
   };
 }
 
-export default function HomePage() {
-  const [health, setHealth] = useState<HealthData | null>(null);
+export default function HomePage(): React.ReactElement {
+  const [health, setHealth] = useState<IHealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchHealth = async () => {
+    const fetchHealth = async (): Promise<void> => {
       try {
         // Call our internal API route which will proxy to the BFF service
         const response = await fetch('/api/system-status');
@@ -49,7 +49,7 @@ export default function HomePage() {
     const seconds = Math.floor(uptime / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
-    
+
     if (hours > 0) return `${hours}h ${minutes % 60}m`;
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
     return `${seconds}s`;
@@ -104,12 +104,12 @@ export default function HomePage() {
             Counterstrike 2 Demo Analysis Platform
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Upload, analyze, and gain insights from your Counterstrike 2 demo files. 
+            Upload, analyze, and gain insights from your Counterstrike 2 demo files.
             Track performance, study strategies, and improve your gameplay with advanced analytics.
           </p>
           <div className="mt-8">
-            <Link 
-              href="/upload" 
+            <Link
+              href="/upload"
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

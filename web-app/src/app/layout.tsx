@@ -1,4 +1,5 @@
 import './globals.css';
+import React from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
@@ -10,21 +11,25 @@ export const metadata: Metadata = {
   description: 'Counterstrike 2 demo analysis and strategy planning platform',
   keywords: ['Counterstrike 2', 'Counter-Strike', 'demo analysis', 'gaming', 'esports'],
   authors: [{ name: 'StratagemForge Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}): React.ReactElement {
   return (
     <html lang="en">
       <body className={inter.className}>
         <div className="min-h-screen bg-gray-50">
           {children}
         </div>
-        <Toaster 
+        <Toaster
           position="top-right"
           toastOptions={{
             duration: 4000,
