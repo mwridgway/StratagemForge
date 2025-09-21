@@ -15,3 +15,6 @@ node_modules/
 data/uploads/
 data/processed/
 logs/
+maps/*
+demos/*
+parquet/*
