@@ -1,258 +1,74 @@
-# Build Troubleshooting Guide
+# Troubleshooting the Modular Monolith
 
-This guide helps resolve common build issues when starting StratagemForge services.
+This guide focuses on common issues when running the single FastAPI application locally.
 
-## Quick Fixes
+## 1. Environment Setup
 
-### 1. Clean Build (Most Common Solution)
-```bash
-# Stop all services
-podman-compose down
+### Virtual environment not activating
+- Ensure you are using `python -m venv .venv` to create the environment.
+- Activate with `source .venv/bin/activate` (macOS/Linux) or `.venv\Scripts\activate` (Windows PowerShell).
 
-# Remove all images and rebuild from scratch
-podman-compose build --no-cache
+### Dependency installation failures
+- Upgrade pip: `python -m pip install --upgrade pip`.
+- If `pyarrow` wheels fail to install, ensure you are on Python 3.11+ and have recent pip versions.
 
-# Start services
-podman-compose up
-```
+## 2. Database Problems
 
-### 2. Check Podman Status
-```bash
-# Verify Podman is running
-podman version
+### SQLite lock errors
+- Close any running FastAPI instance before launching tests or another server.
+- Delete `data/stratagemforge.db` to reset the state if corruption occurs (data will be lost).
 
-# Check Podman machine status (Windows/macOS)
-podman machine list
-podman machine start
-```
+### Using a custom database location
+- Create a `.env` file with `DATABASE_URL=sqlite:///absolute/path/to/stratagemforge.db`.
+- Restart the application so the new settings are picked up.
 
-### 3. Free Up Resources
-```bash
-# Clean up unused containers and images
-podman system prune -a
+## 3. File Upload Issues
 
-# Remove volumes (warning: deletes data)
-podman volume prune
-```
+### "Only .dem files are supported"
+- The ingestion service restricts uploads to files ending in `.dem`.
+- Rename the file if necessary or extend validation logic in `DemoService._stream_to_disk`.
 
-## Common Build Errors
+### Uploads exceed size limit
+- Default limit is 1 GB. Adjust via `.env`: `MAX_UPLOAD_SIZE=2147483648` for 2 GB.
 
-### Error: "Cannot connect to Podman"
-**Solution:**
-```bash
-podman machine start
-```
+### Parquet output missing
+- Confirm the application has write access to `data/processed`.
+- Run `pytest` to ensure the ingestion processor is functioning.
 
-### Error: "CMake not installed" (Python services)
-This is fixed in the updated Dockerfile by adding CMake to the build dependencies.
+## 4. API Troubleshooting
 
-### Error: "go.sum missing" (Go services)
-**Solution:**
-```bash
-cd services/user-service && go mod tidy
-cd ../ingestion-service && go mod tidy
-```
+### FastAPI server does not start
+- Verify dependencies: `pip show fastapi uvicorn`.
+- Check the console for stack traces – missing directories will be created automatically, so file permission errors are most likely.
 
-### Error: "Port already in use"
-**Solution:**
-```bash
-# Find processes using the ports
-netstat -tulpn | grep :3000
-netstat -tulpn | grep :5432
+### 404 on `/api/demos/upload`
+- Ensure you are sending the file with the form field name `demo`.
+- Example using curl:
+  ```bash
+  curl -F "demo=@path/to/file.dem" http://localhost:8000/api/demos/upload
+  ```
 
-# Kill processes or change ports in compose.yml
-```
+### 500 on `/api/analysis`
+- The request references a demo that has no processed parquet file. Re-upload the demo or inspect the logs for file permission errors.
 
-### Error: "Docker registry authentication"
-**Solution:**
-```bash
-# Pull base images manually
-podman pull python:3.11-alpine
-podman pull golang:1.21-alpine
-podman pull node:18-alpine
-podman pull postgres:15-alpine
-```
+## 5. Testing Tips
 
-## Service-Specific Issues
+- `pytest` uses temporary directories for isolation; if tests fail with permission errors, ensure your shell user can create folders in the project directory.
+- Clean the test cache with `pytest --cache-clear` when debugging flaky tests.
 
-### Analysis Service (Python)
-- **Issue**: Polars/DuckDB compilation failures
-- **Solution**: Use simplified pandas-based version (already implemented)
+## 6. Resetting the Environment
 
-### BFF Service (Node.js)
-- **Issue**: npm install failures
-- **Solution**: Clear npm cache and rebuild
-```bash
-cd services/bff
-npm cache clean --force
-npm install
-```
-
-### Go Services (User/Ingestion)
-- **Issue**: Missing dependencies
-- **Solution**: Update Go modules
-```bash
-go mod download
-go mod tidy
-```
-
-### Web App (Next.js)
-- **Issue**: Changes not reflected after rebuild, container networking errors
-- **Problem**: Next.js build cache can retain old environment variables and compiled code
-- **Symptoms**: 
-  - `ECONNREFUSED 127.0.0.1:8080` errors when uploading files
-  - Old localhost URLs in compiled JavaScript despite source code changes
-  - Container-to-container communication failures
-
-**Solution**: Force clean rebuild with cache clearing
-```bash
-# Stop all services
-podman-compose down
-
-# Build web-app with no cache
-podman build --no-cache -t stratagemforge_web-app -f ./web-app/Dockerfile ./web-app
-
-# Verify the compiled output contains correct URLs
-podman run --rm stratagemforge_web-app cat /app/.next/server/app/api/demos/upload/route.js | grep -E "(http://|BFF_SERVICE_URL)"
-
-# Should show "http://bff:8080" not "http://localhost:8080"
-
-# Restart all services
-podman-compose up -d
-```
-
-**Prevention**: Always use `--no-cache` flag when rebuilding web-app after environment changes:
-```bash
-podman-compose build --no-cache web-app
-```
-
-## Development Mode
-
-For faster development, run services individually:
+If things get messy:
 
 ```bash
-# Start only database
-podman-compose up postgres
-
-# Run services in development mode
-cd services/user-service
-go run main.go
-
-# In another terminal
-cd services/bff
-npm run dev
-
-# In another terminal  
-cd web-app
-npm run dev
+rm -rf data/stratagemforge.db data/uploads data/processed
+mkdir -p data/uploads data/processed
 ```
 
-## Build Order Issues
-
-If builds fail due to dependencies, build in order:
+Then restart the server:
 
 ```bash
-# Build infrastructure first
-podman-compose build postgres
-
-# Build backend services
-podman-compose build user-service
-podman-compose build ingestion-service  
-podman-compose build analysis-service
-
-# Build frontend services
-podman-compose build bff
-podman-compose build web-app
+uvicorn stratagemforge.main:app --reload
 ```
 
-## Environment Issues
-
-### Check Environment Variables
-```bash
-# Verify .env file exists
-cat .env
-
-# Check required variables are set
-echo $USER_SERVICE_URL
-echo $DATABASE_URL
-```
-
-### Reset Environment
-```bash
-# Copy example environment
-cp .env.example .env
-
-# Edit with your settings
-notepad .env  # Windows
-nano .env     # Linux/macOS
-```
-
-## Memory Issues
-
-### Increase Docker/Podman Memory
-- **Windows**: Docker Desktop → Settings → Resources → Advanced
-- **macOS**: Docker Desktop → Preferences → Resources → Advanced  
-- **Linux**: Configure cgroup limits
-
-### Reduce Concurrent Builds
-```bash
-# Build one service at a time
-podman-compose build user-service
-podman-compose build ingestion-service
-# etc...
-```
-
-## Network Issues
-
-### Reset Network
-```bash
-podman network prune
-podman-compose down
-podman-compose up
-```
-
-### Check Service Communication
-```bash
-# Test service endpoints
-curl http://localhost:3000/health
-curl http://localhost:8080/health
-```
-
-## Last Resort Solutions
-
-### Complete Reset
-```bash
-# WARNING: This removes everything
-podman system reset
-
-# Restart Podman
-podman machine stop
-podman machine start
-
-# Rebuild everything
-podman-compose build --no-cache
-podman-compose up
-```
-
-### Individual Service Testing
-```bash
-# Build and test one service
-cd services/user-service
-podman build -t test-user-service .
-podman run -p 8080:8080 test-user-service
-```
-
-## Getting Help
-
-1. **Check logs**: `podman-compose logs [service-name]`
-2. **Verbose output**: `podman-compose up --verbose`
-3. **Service status**: `podman-compose ps`
-4. **Resource usage**: `podman stats`
-
-## Success Indicators
-
-When everything works correctly, you should see:
-- ✅ All services show "Built" status
-- ✅ Web app accessible at http://localhost:3000
-- ✅ All health checks pass
-- ✅ No error messages in logs
+You're back to a clean slate.
