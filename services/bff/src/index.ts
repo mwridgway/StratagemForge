@@ -257,7 +257,7 @@ async function buildApp(): Promise<FastifyInstance> {
 
         // Create FormData to forward to ingestion service
         const formData = new FormData();
-        formData.append('file', buffer, {
+        formData.append('demo', buffer, {
           filename: data.filename,
           contentType: data.mimetype
         });

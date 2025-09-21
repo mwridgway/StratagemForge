@@ -122,29 +122,41 @@ func getEnvWithDefault(key, defaultValue string) string {
 }
 
 func NewIngestionService(config *Config) (*IngestionService, error) {
+	log.Printf("[INIT] Creating new ingestion service with config: Port=%s, DataPath=%s, DatabaseURL=%s",
+		config.Port, config.DataPath, maskConnectionString(config.DatabaseURL))
+
 	var db *sql.DB
 	var err error
 
 	// Ensure data directory exists
+	log.Printf("[INIT] Ensuring data directory exists: %s", config.DataPath)
 	if err := os.MkdirAll(config.DataPath, 0755); err != nil {
+		log.Printf("[ERROR] Failed to create data directory %s: %v", config.DataPath, err)
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
+	log.Printf("[INIT] Data directory verified: %s", config.DataPath)
 
 	// Only connect to database if URL is provided
 	if config.DatabaseURL != "" {
+		log.Printf("[INIT] Attempting database connection...")
 		db, err = sql.Open("postgres", config.DatabaseURL)
 		if err != nil {
+			log.Printf("[ERROR] Failed to open database connection: %v", err)
 			return nil, fmt.Errorf("failed to connect to database: %w", err)
 		}
 
 		// Test the connection
+		log.Printf("[INIT] Testing database connection...")
 		if err := db.Ping(); err != nil {
-			log.Printf("Warning: Could not ping database: %v", err)
+			log.Printf("[WARN] Could not ping database: %v", err)
 		} else {
-			log.Println("Successfully connected to database")
+			log.Printf("[INIT] Successfully connected to database")
 		}
+	} else {
+		log.Printf("[INIT] No database URL provided, running without database")
 	}
 
+	log.Printf("[INIT] Ingestion service created successfully")
 	return &IngestionService{
 		config: config,
 		db:     db,
@@ -152,13 +164,31 @@ func NewIngestionService(config *Config) (*IngestionService, error) {
 }
 
 func (is *IngestionService) setupRoutes() *gin.Engine {
+	log.Printf("[ROUTES] Setting up HTTP routes...")
+
 	// Set Gin to release mode for production
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.Default()
 
+	// Add request logging middleware
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		return fmt.Sprintf("[HTTP] %s - [%s] \"%s %s %s\" %d %s \"%s\" \"%s\"\n",
+			param.ClientIP,
+			param.TimeStamp.Format(time.RFC3339),
+			param.Method,
+			param.Path,
+			param.Request.Proto,
+			param.StatusCode,
+			param.Latency,
+			param.Request.UserAgent(),
+			param.ErrorMessage,
+		)
+	}))
+
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
+		log.Printf("[HEALTH] Health check requested from %s", c.ClientIP())
 		status := gin.H{
 			"status":  "healthy",
 			"service": "ingestion-service",
@@ -167,31 +197,40 @@ func (is *IngestionService) setupRoutes() *gin.Engine {
 
 		// Check database connection if available
 		if is.db != nil {
+			log.Printf("[HEALTH] Checking database connection...")
 			if err := is.db.Ping(); err != nil {
+				log.Printf("[ERROR] Database health check failed: %v", err)
 				status["database"] = "unhealthy"
 				status["database_error"] = err.Error()
 				c.JSON(http.StatusServiceUnavailable, status)
 				return
 			}
+			log.Printf("[HEALTH] Database connection healthy")
 			status["database"] = "healthy"
 		} else {
+			log.Printf("[HEALTH] Database not configured")
 			status["database"] = "not_configured"
 		}
 
 		// Check data directory
+		log.Printf("[HEALTH] Checking data directory: %s", is.config.DataPath)
 		if _, err := os.Stat(is.config.DataPath); err != nil {
+			log.Printf("[ERROR] Data directory health check failed: %v", err)
 			status["data_directory"] = "unhealthy"
 			status["data_directory_error"] = err.Error()
 			c.JSON(http.StatusServiceUnavailable, status)
 			return
 		}
+		log.Printf("[HEALTH] Data directory accessible")
 		status["data_directory"] = "healthy"
 
+		log.Printf("[HEALTH] Health check completed successfully")
 		c.JSON(http.StatusOK, status)
 	})
 
 	// Ready check endpoint
 	r.GET("/ready", func(c *gin.Context) {
+		log.Printf("[READY] Ready check requested from %s", c.ClientIP())
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ready",
 			"service": "ingestion-service",
@@ -200,6 +239,7 @@ func (is *IngestionService) setupRoutes() *gin.Engine {
 
 	// Configuration endpoint
 	r.GET("/config", func(c *gin.Context) {
+		log.Printf("[CONFIG] Configuration requested from %s", c.ClientIP())
 		c.JSON(http.StatusOK, gin.H{
 			"port":         is.config.Port,
 			"database_url": maskConnectionString(is.config.DatabaseURL),
@@ -217,13 +257,17 @@ func (is *IngestionService) setupRoutes() *gin.Engine {
 	// List uploaded demos
 	r.GET("/demos", is.listDemos)
 
+	log.Printf("[ROUTES] HTTP routes configured successfully")
 	return r
 }
 
 func (is *IngestionService) handleDemoUpload(c *gin.Context) {
+	log.Printf("[UPLOAD] Demo upload request received from %s", c.ClientIP())
+
 	// Get the uploaded file
 	file, header, err := c.Request.FormFile("demo")
 	if err != nil {
+		log.Printf("[ERROR] No file uploaded in request: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "No file uploaded",
 			"message": "Please upload a .dem file",
@@ -232,9 +276,23 @@ func (is *IngestionService) handleDemoUpload(c *gin.Context) {
 	}
 	defer file.Close()
 
+	log.Printf("[UPLOAD] File received: %s (size: %d bytes)", header.Filename, header.Size)
+
+	// Validate file extension
+	if !strings.HasSuffix(strings.ToLower(header.Filename), ".dem") {
+		log.Printf("[ERROR] Invalid file type uploaded: %s", header.Filename)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid file type",
+			"message": "Only .dem files are supported",
+		})
+		return
+	}
+
 	// Create temporary file to save the uploaded demo
+	log.Printf("[UPLOAD] Creating temporary file in %s", is.config.DataPath)
 	tempFile, err := os.CreateTemp(is.config.DataPath, "upload_*.dem")
 	if err != nil {
+		log.Printf("[ERROR] Failed to create temporary file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create temporary file",
 			"message": err.Error(),
@@ -242,14 +300,21 @@ func (is *IngestionService) handleDemoUpload(c *gin.Context) {
 		return
 	}
 	tempPath := tempFile.Name()
+	log.Printf("[UPLOAD] Created temporary file: %s", tempPath)
+
 	defer func() {
 		tempFile.Close()
-		os.Remove(tempPath) // Clean up temp file
+		log.Printf("[UPLOAD] Cleaning up temporary file: %s", tempPath)
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			log.Printf("[WARN] Failed to remove temporary file %s: %v", tempPath, removeErr)
+		}
 	}()
 
 	// Copy uploaded file to temp file
+	log.Printf("[UPLOAD] Copying uploaded file to temporary location...")
 	size, err := io.Copy(tempFile, file)
 	if err != nil {
+		log.Printf("[ERROR] Failed to save uploaded file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to save uploaded file",
 			"message": err.Error(),
@@ -257,10 +322,13 @@ func (is *IngestionService) handleDemoUpload(c *gin.Context) {
 		return
 	}
 	tempFile.Close() // Close before processing
+	log.Printf("[UPLOAD] File copied successfully: %d bytes written", size)
 
 	// Generate match ID from file content
+	log.Printf("[UPLOAD] Generating match ID from file content...")
 	matchID, err := generateMatchID(tempPath)
 	if err != nil {
+		log.Printf("[ERROR] Failed to generate match ID: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to generate match ID",
 			"message": err.Error(),
@@ -268,12 +336,13 @@ func (is *IngestionService) handleDemoUpload(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Demo uploaded: Filename=%s, Size=%d bytes, MatchID=%s", header.Filename, size, matchID)
+	log.Printf("[UPLOAD] Demo uploaded successfully: Filename=%s, Size=%d bytes, MatchID=%s", header.Filename, size, matchID)
 
 	// Process the demo file and generate Parquet files
+	log.Printf("[PROCESSING] Starting demo processing for match %s...", matchID)
 	result, err := is.processDemoFile(tempPath, matchID)
 	if err != nil {
-		log.Printf("Demo processing failed for match %s: %v", matchID, err)
+		log.Printf("[ERROR] Demo processing failed for match %s: %v", matchID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to process demo file",
 			"message": err.Error(),
@@ -281,8 +350,8 @@ func (is *IngestionService) handleDemoUpload(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Demo processing completed for match %s: %d ticks, %d players",
-		matchID, result.TotalTicks, result.TotalPlayers)
+	log.Printf("[PROCESSING] Demo processing completed successfully for match %s: %d ticks, %d players, map: %s",
+		matchID, result.TotalTicks, result.TotalPlayers, result.MapName)
 
 	// Return processing result
 	response := gin.H{
@@ -350,23 +419,33 @@ func (is *IngestionService) listDemos(c *gin.Context) {
 
 // generateMatchID creates a unique match ID from file content hash
 func generateMatchID(filePath string) (string, error) {
+	log.Printf("[UTIL] Generating match ID for file: %s", filePath)
+
 	file, err := os.Open(filePath)
 	if err != nil {
+		log.Printf("[ERROR] Failed to open file for hash generation: %v", err)
 		return "", err
 	}
 	defer file.Close()
 
 	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
+	bytesRead, err := io.Copy(hasher, file)
+	if err != nil {
+		log.Printf("[ERROR] Failed to read file for hash generation: %v", err)
 		return "", err
 	}
 
 	hash := hex.EncodeToString(hasher.Sum(nil))
-	return hash[:16], nil // Use first 16 characters for shorter ID
+	matchID := hash[:16] // Use first 16 characters for shorter ID
+
+	log.Printf("[UTIL] Match ID generated successfully: %s (from %d bytes)", matchID, bytesRead)
+	return matchID, nil
 }
 
 // createOutputPaths creates the directory structure for output files
 func createOutputPaths(dataPath, matchID, mapName string) (string, string, error) {
+	log.Printf("[UTIL] Creating output paths for match %s on map %s", matchID, mapName)
+
 	now := time.Now()
 	datePart := now.Format("2006-01-02")
 
@@ -376,71 +455,110 @@ func createOutputPaths(dataPath, matchID, mapName string) (string, string, error
 	if cleanMapName == "" {
 		cleanMapName = "unknown"
 	}
+	log.Printf("[UTIL] Cleaned map name: %s -> %s", mapName, cleanMapName)
 
 	outputDir := filepath.Join(dataPath, "processed", datePart, cleanMapName, matchID)
+	log.Printf("[UTIL] Creating output directory: %s", outputDir)
+
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		log.Printf("[ERROR] Failed to create output directory %s: %v", outputDir, err)
 		return "", "", fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	ticksFile := filepath.Join(outputDir, "ticks.parquet")
 	playerFile := filepath.Join(outputDir, "player_ticks.parquet")
 
+	log.Printf("[UTIL] Output paths created successfully:")
+	log.Printf("[UTIL]   - Ticks file: %s", ticksFile)
+	log.Printf("[UTIL]   - Players file: %s", playerFile)
+
 	return ticksFile, playerFile, nil
 }
 
 // writeParquetFile writes data to a Parquet file
 func writeParquetFile(filePath string, data interface{}) error {
+	log.Printf("[UTIL] Writing parquet file: %s", filePath)
+
 	file, err := os.Create(filePath)
 	if err != nil {
+		log.Printf("[ERROR] Failed to create parquet file %s: %v", filePath, err)
 		return fmt.Errorf("failed to create file %s: %w", filePath, err)
 	}
 	defer file.Close()
 
 	// Create schema based on data type
 	var schema *parquet.Schema
-	switch data.(type) {
+	var recordCount int
+
+	switch d := data.(type) {
 	case []TickData:
 		schema = parquet.SchemaOf(new(TickData))
+		recordCount = len(d)
+		log.Printf("[UTIL] Writing %d tick records to parquet file", recordCount)
 	case []PlayerTickData:
 		schema = parquet.SchemaOf(new(PlayerTickData))
+		recordCount = len(d)
+		log.Printf("[UTIL] Writing %d player records to parquet file", recordCount)
 	default:
+		log.Printf("[ERROR] Unsupported data type for Parquet writing: %T", data)
 		return fmt.Errorf("unsupported data type for Parquet writing")
 	}
 
+	log.Printf("[UTIL] Creating parquet writer with schema...")
 	writer := parquet.NewWriter(file, schema)
 	defer writer.Close()
 
 	// Write data
+	startTime := time.Now()
 	switch d := data.(type) {
 	case []TickData:
-		for _, item := range d {
+		for i, item := range d {
 			if err := writer.Write(&item); err != nil {
+				log.Printf("[ERROR] Failed to write tick record %d: %v", i, err)
 				return fmt.Errorf("failed to write tick data: %w", err)
 			}
 		}
 	case []PlayerTickData:
-		for _, item := range d {
+		for i, item := range d {
 			if err := writer.Write(&item); err != nil {
+				log.Printf("[ERROR] Failed to write player record %d: %v", i, err)
 				return fmt.Errorf("failed to write player data: %w", err)
 			}
 		}
 	}
+	writeTime := time.Since(startTime)
+
+	// Get file size
+	fileInfo, _ := file.Stat()
+	log.Printf("[UTIL] Parquet file written successfully: %s (%d records, %d bytes, %v)",
+		filePath, recordCount, fileInfo.Size(), writeTime)
 
 	return nil
 }
 
 // processDemoFile parses a CS2 demo file and generates Parquet files
 func (is *IngestionService) processDemoFile(demoPath, matchID string) (*ProcessingResult, error) {
-	log.Printf("Starting demo processing for match %s", matchID)
+	log.Printf("[PROCESSING] Starting demo processing for match %s from file: %s", matchID, demoPath)
+
+	// Check if file exists and is readable
+	fileInfo, err := os.Stat(demoPath)
+	if err != nil {
+		log.Printf("[ERROR] Cannot access demo file %s: %v", demoPath, err)
+		return nil, fmt.Errorf("failed to access demo file: %w", err)
+	}
+	log.Printf("[PROCESSING] Demo file verified: %s (%d bytes)", demoPath, fileInfo.Size())
 
 	// Open demo file
+	log.Printf("[PROCESSING] Opening demo file for parsing...")
 	file, err := os.Open(demoPath)
 	if err != nil {
+		log.Printf("[ERROR] Failed to open demo file %s: %v", demoPath, err)
 		return nil, fmt.Errorf("failed to open demo file: %w", err)
 	}
 	defer file.Close()
 
 	// Create demo parser
+	log.Printf("[PROCESSING] Creating demo parser...")
 	parser := demoinfocs.NewParser(file)
 	defer parser.Close()
 
@@ -452,6 +570,8 @@ func (is *IngestionService) processDemoFile(demoPath, matchID string) (*Processi
 	var ticksData []TickData
 	var playersData []PlayerTickData
 
+	log.Printf("[PROCESSING] Registering event handlers...")
+
 	// Register event handler for frame completion
 	parser.RegisterEventHandler(func(e events.FrameDone) {
 		gameState := parser.GameState()
@@ -462,10 +582,14 @@ func (is *IngestionService) processDemoFile(demoPath, matchID string) (*Processi
 			return
 		}
 
+		processedFrames++
+		if processedFrames%1000 == 0 {
+			log.Printf("[PROCESSING] Processed %d frames for match %s (current tick: %d)", processedFrames, matchID, tick)
+		}
+
 		// Get map name if not set
 		if mapName == "" {
-			// Try to get it from various sources
-			mapName = "unknown" // Default fallback
+			mapName = "unknown" // Default fallback, will be updated from ServerInfo
 		}
 
 		// Create tick data (simplified)
@@ -568,16 +692,16 @@ func (is *IngestionService) processDemoFile(demoPath, matchID string) (*Processi
 			// Extract useful server information
 			if m.MapName != nil {
 				mapName = *m.MapName
-				log.Printf("Map name from ServerInfo: %s", mapName)
+				log.Printf("[PROCESSING] Map name detected from ServerInfo: %s", mapName)
 			}
 			if m.GameDir != nil {
-				log.Printf("Game directory: %s", *m.GameDir)
+				log.Printf("[PROCESSING] Game directory: %s", *m.GameDir)
 			}
 			if m.TickInterval != nil {
-				log.Printf("Server tick interval: %f", *m.TickInterval)
+				log.Printf("[PROCESSING] Server tick interval: %f", *m.TickInterval)
 			}
 			if m.MaxClients != nil {
-				log.Printf("Max clients: %d", *m.MaxClients)
+				log.Printf("[PROCESSING] Max clients: %d", *m.MaxClients)
 			}
 		}
 	})
@@ -585,49 +709,76 @@ func (is *IngestionService) processDemoFile(demoPath, matchID string) (*Processi
 	// Register net message handler for game event list
 	parser.RegisterNetMessageHandler(func(m *msg.CSVCMsg_GameEventList) {
 		if m != nil && m.Descriptors != nil {
-			log.Printf("Game events available: %d", len(m.Descriptors))
+			log.Printf("[PROCESSING] Game events available: %d", len(m.Descriptors))
 			// Optionally log specific events of interest
 			for _, desc := range m.Descriptors {
 				if desc.Name != nil && (*desc.Name == "player_death" || *desc.Name == "round_start" || *desc.Name == "round_end") {
-					log.Printf("Found game event: %s (ID: %d)", *desc.Name, desc.GetEventid())
+					log.Printf("[PROCESSING] Found game event: %s (ID: %d)", *desc.Name, desc.GetEventid())
 				}
 			}
 		}
 	})
 
 	// Parse the entire demo
+	log.Printf("[PROCESSING] Starting full demo parsing for match %s...", matchID)
+	startTime := time.Now()
 	err = parser.ParseToEnd()
+	parseTime := time.Since(startTime)
+
 	if err != nil {
+		log.Printf("[ERROR] Demo parsing failed for match %s after %v: %v", matchID, parseTime, err)
 		return nil, fmt.Errorf("demo parsing error: %w", err)
 	}
+
+	log.Printf("[PROCESSING] Demo parsing completed for match %s in %v", matchID, parseTime)
+	log.Printf("[PROCESSING] Parsing statistics: %d frames processed, %d ticks collected, %d players tracked",
+		processedFrames, len(ticksData), len(playerSet))
 
 	// Set default map name if still empty
 	if mapName == "" {
 		mapName = "unknown"
+		log.Printf("[WARN] Map name could not be determined, using default: %s", mapName)
 	}
 
 	// Create output file paths
+	log.Printf("[PROCESSING] Creating output file paths for match %s on map %s...", matchID, mapName)
 	ticksFile, playerFile, err := createOutputPaths(is.config.DataPath, matchID, mapName)
 	if err != nil {
+		log.Printf("[ERROR] Failed to create output paths for match %s: %v", matchID, err)
 		return nil, err
 	}
+	log.Printf("[PROCESSING] Output paths created - Ticks: %s, Players: %s", ticksFile, playerFile)
 
 	// Write Parquet files
 	if len(ticksData) > 0 {
+		log.Printf("[PROCESSING] Writing %d tick records to parquet file: %s", len(ticksData), ticksFile)
+		writeStartTime := time.Now()
 		err = writeParquetFile(ticksFile, ticksData)
+		writeTime := time.Since(writeStartTime)
 		if err != nil {
+			log.Printf("[ERROR] Failed to write ticks parquet file %s: %v", ticksFile, err)
 			return nil, fmt.Errorf("failed to write ticks parquet file: %w", err)
 		}
+		log.Printf("[PROCESSING] Ticks parquet file written successfully in %v", writeTime)
+	} else {
+		log.Printf("[WARN] No tick data to write for match %s", matchID)
 	}
 
 	if len(playersData) > 0 {
+		log.Printf("[PROCESSING] Writing %d player records to parquet file: %s", len(playersData), playerFile)
+		writeStartTime := time.Now()
 		err = writeParquetFile(playerFile, playersData)
+		writeTime := time.Since(writeStartTime)
 		if err != nil {
+			log.Printf("[ERROR] Failed to write players parquet file %s: %v", playerFile, err)
 			return nil, fmt.Errorf("failed to write players parquet file: %w", err)
 		}
+		log.Printf("[PROCESSING] Players parquet file written successfully in %v", writeTime)
+	} else {
+		log.Printf("[WARN] No player data to write for match %s", matchID)
 	}
 
-	log.Printf("Demo processing completed for match %s: %d ticks, %d players, Map: %s",
+	log.Printf("[PROCESSING] Demo processing completed successfully for match %s: %d ticks, %d players, Map: %s",
 		matchID, len(ticksData), len(playerSet), mapName)
 
 	return &ProcessingResult{
@@ -649,28 +800,45 @@ func maskConnectionString(connectionString string) string {
 }
 
 func main() {
-	log.Println("Starting Ingestion Service...")
+	log.Printf("[STARTUP] ==========================================")
+	log.Printf("[STARTUP] Starting Ingestion Service...")
+	log.Printf("[STARTUP] ==========================================")
 
 	// Load configuration from environment variables
+	log.Printf("[STARTUP] Loading configuration from environment...")
 	config := NewConfig()
-	log.Printf("Loaded configuration: Port=%s, DataPath=%s", config.Port, config.DataPath)
+	log.Printf("[STARTUP] Configuration loaded successfully:")
+	log.Printf("[STARTUP]   - Port: %s", config.Port)
+	log.Printf("[STARTUP]   - Data Path: %s", config.DataPath)
+	log.Printf("[STARTUP]   - Database URL: %s", maskConnectionString(config.DatabaseURL))
 
 	// Create ingestion service instance
+	log.Printf("[STARTUP] Creating ingestion service instance...")
 	ingestionService, err := NewIngestionService(config)
 	if err != nil {
-		log.Fatalf("Failed to create ingestion service: %v", err)
+		log.Fatalf("[FATAL] Failed to create ingestion service: %v", err)
 	}
+	log.Printf("[STARTUP] Ingestion service instance created successfully")
 
 	// Setup routes
+	log.Printf("[STARTUP] Setting up HTTP routes...")
 	router := ingestionService.setupRoutes()
+	log.Printf("[STARTUP] HTTP routes configured successfully")
 
 	// Start server
 	addr := ":" + config.Port
-	log.Printf("Ingestion Service listening on %s", addr)
-	log.Printf("Health check available at: http://localhost:%s/health", config.Port)
-	log.Printf("Data directory: %s", config.DataPath)
+	log.Printf("[STARTUP] ==========================================")
+	log.Printf("[STARTUP] Ingestion Service ready to start!")
+	log.Printf("[STARTUP] ==========================================")
+	log.Printf("[STARTUP] Listening on: %s", addr)
+	log.Printf("[STARTUP] Health check: http://localhost:%s/health", config.Port)
+	log.Printf("[STARTUP] Configuration: http://localhost:%s/config", config.Port)
+	log.Printf("[STARTUP] Upload endpoint: http://localhost:%s/upload", config.Port)
+	log.Printf("[STARTUP] Data directory: %s", config.DataPath)
+	log.Printf("[STARTUP] ==========================================")
 
+	log.Printf("[STARTUP] Starting HTTP server...")
 	if err := router.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("[FATAL] Failed to start server: %v", err)
 	}
 }
