@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stratagemforge"
+version = "0.1.0"
+description = "Modular monolith backend for StratagemForge"
+authors = [{name = "StratagemForge Team"}]
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Framework :: FastAPI",
+]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.24",
+    "pydantic-settings>=2.0",
+    "SQLAlchemy>=2.0",
+    "alembic>=1.12",
+    "pandas>=2.2",
+    "pyarrow>=16.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.21",
+    "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
