@@ -1,204 +1,81 @@
-# Strategem Forge: AI-Powered Counter-Strike 2 Analytics Platform
+# StratagemForge Modular Monolith
 
-## 1\. Overview
+A streamlined Python backend for exploring Counter-Strike 2 demo analytics without the operational overhead of a multi-service stack. The new architecture focuses on developer productivity: run one FastAPI application locally, upload demo files, generate parquet artefacts, and experiment with lightweight insights in a few commands.
 
-Strategem Forge self-hostable analytics platform designed to give Counter-Strike 2 teams a competitive edge. 
+## Key Features
 
-### Core Technologies
+- **Unified FastAPI application** – ingestion, analysis, and user features live in a single process.
+- **Local-first workflow** – no containers or external services required; SQLite powers persistence by default.
+- **Demo ingestion pipeline** – upload `.dem` files, compute checksums, and persist parquet summaries for later analysis.
+- **Exploratory analytics** – read processed parquet files and return quick metadata statistics through the API.
+- **Seeded demo users** – a default "Demo Analyst" account is created automatically to unblock UI experimentation.
+- **Extensible modular design** – domain-specific packages (`demos`, `analysis`, `users`) are ready for deeper implementations.
 
-**Backend Microservices:**
-- **Go**: High-performance services for user management and data ingestion
-- **Python**: ML and data analytics service with pandas/numpy
-- **Node.js/TypeScript**: BFF (Backend for Frontend) API gateway
-- **PostgreSQL**: Primary data storage for structured data
-- **Podman**: Container orchestration for development and deployment
+## Project Layout
 
-**Frontend:**
-- **Next.js 14**: Modern React framework with App Router
-- **TypeScript**: Type-safe development experience
-- **Tailwind CSS**: Utility-first styling framework
-
-**Architecture:**
-- **Microservices**: Loosely coupled, independently deployable services
-- **API Gateway Pattern**: BFF service handles frontend-specific API aggregation
-- **Container-First**: Fully containerized with multi-stage Docker builds
-- **Database-Per-Service**: Each service can have isolated data storage
-
-
-## 2\. Phased Implementation Plan
-
-This project is designed to be built in distinct, sequential phases. Each phase delivers a functional component of the platform, allowing for incremental development and immediate value at every stage.
-
-### Phase 1: The Foundation - Automated Demo Parsing
-
-### Phase 2: The Command Center - Interactive Dashboard
-
-### Phase 3: The AI Analyst - "Query-Your-Demos" with RAG
-
-### Phase 4: Advanced Insight - GNN for Tactic Classification
-
-### Phase 5: Automation & Expansion - Fine-Tuning for Scouting
-
-## 3\. Setup and Installation
-
-### Prerequisites
-
-- **Podman** (or Docker) - Container runtime for running microservices
-  - Windows: Install Podman Desktop or use `winget install podman`
-  - macOS: `brew install podman`
-  - Linux: Install via package manager
-- **podman-compose** - Docker Compose compatibility for Podman
-  - Install: `pip install podman-compose`
-- **Git** - Version control for cloning the repository
-- **8GB+ RAM** - Recommended for running all services simultaneously
-- **Windows, macOS, or Linux** - Cross-platform compatible
-
-**Note**: On Windows, you'll need to start the Podman machine first:
-```bash
-podman machine init
-podman machine start
+```
+├── pyproject.toml                 # Project and dependency metadata
+├── src/
+│   └── stratagemforge/
+│       ├── core/                  # Configuration, database helpers, FastAPI factory
+│       ├── api/                   # Route definitions and dependency wiring
+│       └── domain/                # Feature modules (demos, analysis, users)
+├── data/                          # Default data directory (raw uploads & processed parquet)
+└── tests/                         # Unit and integration tests
 ```
 
-### Quick Start
+## Getting Started
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/mwridgway/StratagemForge.git
-   cd StratagemForge
-   
-   # For the latest containerized version, use the refactor branch:
-   git checkout refactor/scorched-earth
-   ```
-
-2. **Start All Services**
-   ```bash
-   # Start the complete platform with one command
-   podman-compose up -d
-   ```
-
-3. **Access the Platform**
-   - **Web Application**: http://localhost:3000
-   - **BFF API Gateway**: http://localhost:8080
-   - **BFF Endpoints**: http://localhost:8080/ (lists all available endpoints)
-   - **System Health**: http://localhost:8080/health
-
-4. **Verify Everything is Running**
-   ```bash
-   # Check all service status
-   podman-compose ps
-   
-   # Test web application
-   curl http://localhost:3000
-   
-   # Test API gateway and see all available endpoints
-   curl http://localhost:8080/
-   
-   # Test API gateway health
-   curl http://localhost:8080/health
-   ```
-
-### What Gets Started
-
-The `podman-compose up -d` command starts all 6 microservices:
-
-| Service | Technology | Port | Purpose |
-|---------|------------|------|---------|
-| **Web App** | Next.js/React | 3000 | User interface |
-| **BFF Service** | Node.js/TypeScript | 8080 | API orchestration & Gateway |
-| **User Service** | Go/Gin | 8081 | Authentication & User Management |
-| **Ingestion Service** | Go/Gin | 8083 | Demo file processing |
-| **Analysis Service** | Python/FastAPI | 8082 | Data analytics & ML |
-| **PostgreSQL** | Database | 5432 | Data storage |
-
-### Development Mode
-
-For development with hot reloading:
+### 1. Create a virtual environment
 
 ```bash
-# Start infrastructure only
-podman-compose up postgres -d
-
-# Run services individually in development mode
-cd services/user-service && go run main.go
-cd services/ingestion-service && go run main.go  
-cd services/analysis-service && python main.py
-cd services/bff && npm run dev
-cd web-app && npm run dev
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 ```
 
-### Stopping Services
+### 2. Install dependencies
 
 ```bash
-# Stop all services
-podman-compose down
-
-# Stop and remove volumes (clean slate)
-podman-compose down -v
+pip install -e .[dev]
 ```
 
-### Troubleshooting
+### 3. Run the API locally
 
-**Services not starting?**
-- Check if ports 3000, 5432, 8080-8083 are available
-- Ensure Podman machine is running: `podman machine start`
-- Check Podman status: `podman version`
-- View logs: `podman-compose logs [service-name]`
-
-**Database connection issues?**
-- Wait 30-60 seconds for PostgreSQL to fully initialize
-- Check health status: `curl http://localhost:8080/health`
-
-**Need to rebuild after changes?**
 ```bash
-# Rebuild all images
-podman-compose build
-
-# Rebuild specific service
-podman-compose build user-service
-
-# Rebuild and restart
-podman-compose up --build -d
+uvicorn stratagemforge.main:app --reload
 ```
 
-## 4\. Usage
+The API is now available at <http://localhost:8000>. Useful endpoints:
 
-### Uploading Demo Files
+- `GET /` – service overview
+- `POST /api/demos/upload` – upload `.dem` files
+- `GET /api/demos` – list uploaded demos
+- `POST /api/analysis` – run lightweight analysis over processed parquet data
+- `GET /docs` – interactive OpenAPI documentation
 
-1. Navigate to http://localhost:3000/demos
-2. Click "Upload Demo" 
-3. Select your Counterstrike 2 `.dem` files
-4. Monitor processing status
+All data is stored beneath `./data` by default. The application will create subdirectories for raw uploads (`data/uploads`) and processed parquet output (`data/processed`).
 
-### Viewing Analysis
+## Development Tips
 
-1. Go to http://localhost:3000/analysis
-2. Select processed demos
-3. View statistics, heatmaps, and insights
-4. Export reports and data
+- Settings are powered by `pydantic-settings`. Override defaults by creating a `.env` file (e.g. `DATABASE_URL`, `DATA_DIR`, `MAX_UPLOAD_SIZE`).
+- The SQLite database lives at `data/stratagemforge.db`. Remove the file to reset the environment.
+- Demo ingestion streams uploads to disk in 4MB chunks to avoid excessive memory usage.
+- Processed parquet files contain metadata for each demo. Extend `DemoProcessor` to add richer parsing in future iterations.
+- The seeded demo user (`analyst@example.com`) enables quick UI authentication flows. Adjust or extend the seeding logic in `UserService.ensure_seed`.
 
-### API Access
+## Running Tests
 
-Access the full API through the BFF service:
-- **Available endpoints**: `GET http://localhost:8080/` (shows all endpoints)
-- **Health checks**: `GET http://localhost:8080/health`
-- **Service config**: `GET http://localhost:8080/config`
-- **Demo management**: `GET http://localhost:8080/api/demos`
-- **User management**: `GET http://localhost:8080/api/users`
-- **Run analysis**: `POST http://localhost:8080/api/analysis`
+```bash
+pytest
+```
 
-### System Monitoring
+Unit tests cover the ingestion processor and service, while integration tests exercise the FastAPI endpoints end-to-end using temporary data directories.
 
-Monitor system health and service status:
-- **BFF Gateway**: http://localhost:8080/health
-- **Individual services**: 
-  - User Service: http://localhost:8081/health
-  - Analysis Service: http://localhost:8082/health  
-  - Ingestion Service: http://localhost:8083/health
-- **Container status**: `podman-compose ps`
-- **Service configuration**: http://localhost:8080/config
+## Roadmap Ideas
 
-## 5\. Contributing
+- Replace the placeholder parquet generator with a real demo parser when ready.
+- Expand the analysis module with tactical insights, visualisations, or embeddings.
+- Introduce authentication and role management once UI requirements solidify.
+- Add background processing for long-running demo parsing jobs.
 
-## 6\. License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+Enjoy building without the microservice overhead!
