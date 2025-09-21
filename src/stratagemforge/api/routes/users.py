@@ -14,7 +14,7 @@ def list_users(
     session: Session = Depends(deps.get_db),
     service=Depends(deps.get_user_service),
 ) -> list[UserSummary]:
-    return [UserSummary.from_orm(user) for user in service.list_users(session)]
+    return [UserSummary.model_validate(user, from_attributes=True) for user in service.list_users(session)]
 
 
 @router.post("/auth/login", response_model=LoginResponse)
@@ -28,4 +28,8 @@ def login(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
-    return LoginResponse(token=token, user=UserSummary.from_orm(user), message="Login successful")
+    return LoginResponse(
+        token=token,
+        user=UserSummary.model_validate(user, from_attributes=True),
+        message="Login successful",
+    )

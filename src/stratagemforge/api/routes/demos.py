@@ -27,7 +27,7 @@ def get_demo(
     demo = service.get_demo(session, demo_id)
     if not demo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Demo not found")
-    return DemoDetail.from_orm(demo)
+    return DemoDetail.model_validate(demo, from_attributes=True)
 
 
 @router.post("/upload", response_model=DemoUploadResponse, status_code=status.HTTP_201_CREATED)
@@ -42,7 +42,7 @@ async def upload_demo(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     message = "Demo uploaded and processed" if created else "Demo already processed"
-    return DemoUploadResponse.from_orm(stored).copy(update={"message": message})
+    return DemoUploadResponse.model_validate(stored, from_attributes=True).model_copy(update={"message": message})
 
 
 @router.get("/{demo_id}/status", response_model=DemoProcessingStatus)

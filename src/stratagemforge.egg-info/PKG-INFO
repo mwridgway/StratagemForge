@@ -1,3 +1,27 @@
+Metadata-Version: 2.4
+Name: stratagemforge
+Version: 0.1.0
+Summary: Modular monolith backend for StratagemForge
+Author: StratagemForge Team
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Framework :: FastAPI
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn>=0.24
+Requires-Dist: pydantic-settings>=2.0
+Requires-Dist: SQLAlchemy>=2.0
+Requires-Dist: alembic>=1.12
+Requires-Dist: pandas>=2.2
+Requires-Dist: pyarrow>=16.0
+Requires-Dist: python-multipart>=0.0.7
+Requires-Dist: email-validator>=2.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21; extra == "dev"
+Requires-Dist: httpx>=0.27; extra == "dev"
+
 # StratagemForge Modular Monolith
 
 A streamlined Python backend for exploring Counter-Strike 2 demo analytics without the operational overhead of a multi-service stack. The new architecture focuses on developer productivity: run one FastAPI application locally, upload demo files, generate parquet artefacts, and experiment with lightweight insights in a few commands.
