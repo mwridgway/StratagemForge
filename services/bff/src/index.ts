@@ -1,18 +1,18 @@
 import fastify, { FastifyInstance } from 'fastify';
 import axios from 'axios';
 import FormData from 'form-data';
+import path from 'node:path';
+import { PassThrough } from 'node:stream';
+import { pipeline as streamPipeline } from 'node:stream/promises';
+
+import type { MultipartFile } from '@fastify/multipart';
 
 // Extend FastifyRequest to include multipart functionality
 declare module 'fastify' {
   interface FastifyRequest {
-    file(): Promise<{
-      filename: string;
-      mimetype: string;
-      toBuffer(): Promise<Buffer>;
-    } | undefined>;
+    file(): Promise<MultipartFile | undefined>;
   }
 }
-
 // Import configuration (simplified for now)
 const config = {
   PORT: parseInt(process.env.PORT || '3000'),
@@ -233,37 +233,39 @@ async function buildApp(): Promise<FastifyInstance> {
 
     // Demo upload endpoint
     fastify.post('/api/demos/upload', async (request, reply) => {
+      const maxFileSize = 1024 * 1024 * 1024; // 1GB
+      let pipelinePromise: Promise<void> | undefined;
+
       try {
-        // Use multipart file() method for file upload
         const data = await request.file();
 
         if (!data) {
           return reply.code(400).send({ error: 'No file uploaded' });
         }
 
-        // Validate file type
-        const allowedMimeTypes = ['application/zip', 'application/octet-stream', 'application/x-zip-compressed'];
-        const maxFileSize = 1024 * 1024 * 1024; // 1GB
+        const { file, filename, mimetype } = data;
+        const extension = path.extname(filename).toLowerCase();
+        const allowedMimeTypes = new Set(['', 'application/octet-stream', 'application/x-dem-file']);
 
-        if (!allowedMimeTypes.includes(data.mimetype)) {
-          return reply.code(400).send({ error: 'Invalid file type' });
+        if (extension !== '.dem' || (mimetype && !allowedMimeTypes.has(mimetype))) {
+          file.resume();
+          return reply.code(400).send({
+            error: 'Invalid file type',
+            message: 'Only .dem files are supported'
+          });
         }
 
-        // Note: File size validation happens at the plugin level via limits configuration
-        // The file stream will be truncated if it exceeds the configured limit
+        const normalizedMime = mimetype && mimetype.length > 0 ? mimetype : 'application/octet-stream';
 
-        // Convert the file stream to buffer for forwarding
-        const buffer = await data.toBuffer();
-
-        // Create FormData to forward to ingestion service
         const formData = new FormData();
-        formData.append('demo', buffer, {
-          filename: data.filename,
-          contentType: data.mimetype
+        const passThrough = new PassThrough();
+
+        formData.append('demo', passThrough, {
+          filename,
+          contentType: normalizedMime
         });
 
-        // Forward to ingestion service
-        const response = await axios.post(`${config.INGESTION_SERVICE_URL}/upload`, formData, {
+        const uploadPromise = axios.post(`${config.INGESTION_SERVICE_URL}/upload`, formData, {
           headers: {
             ...formData.getHeaders(),
           },
@@ -272,15 +274,50 @@ async function buildApp(): Promise<FastifyInstance> {
           timeout: 60000 // 60 seconds
         });
 
+        pipelinePromise = streamPipeline(file, passThrough);
+
+        const response = await uploadPromise;
+        await pipelinePromise;
+
         return response.data;
       } catch (error) {
+        if (pipelinePromise) {
+          await pipelinePromise.catch(() => {});
+        }
+
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            const status = error.response.status ?? 500;
+            const payload =
+              error.response.data && typeof error.response.data === 'object'
+                ? error.response.data
+                : {
+                    error: 'Failed to upload demo file',
+                    details: String(error.response.data ?? 'Unknown error')
+                  };
+
+            return reply.code(status).send(payload);
+          }
+
+          if (error.code === 'ECONNABORTED') {
+            return reply.code(504).send({
+              error: 'Failed to upload demo file',
+              details: 'Upload timed out while contacting ingestion service'
+            });
+          }
+
+          return reply.code(502).send({
+            error: 'Failed to upload demo file',
+            details: error.message || 'Ingestion service is unavailable'
+          });
+        }
+
         return reply.code(500).send({
           error: 'Failed to upload demo file',
           details: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     });
-
     // Analysis API
     fastify.post('/api/analysis', async (request) => {
       return {
