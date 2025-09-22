@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -20,7 +20,7 @@ def test_processor_creates_parquet(tmp_path):
         original_filename="sample.dem",
         checksum="abc123",
         size_bytes=raw_path.stat().st_size,
-        uploaded_at=datetime.utcnow(),
+        uploaded_at=datetime.now(timezone.utc),
         raw_path=raw_path,
     )
 

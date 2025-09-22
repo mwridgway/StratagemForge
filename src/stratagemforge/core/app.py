@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from ..api import deps
@@ -15,16 +16,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     init_engine(settings)
     create_all()
 
-    app = FastAPI(title=settings.app_name, version=settings.version)
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):  # pragma: no cover - simple startup hook
+        # Seed initial users at startup
+        with session_scope() as session:
+            deps.get_user_service().ensure_seed(session)
+        yield
+
+    app = FastAPI(title=settings.app_name, version=settings.version, lifespan=lifespan)
 
     app.include_router(health.router)
     app.include_router(demos.router)
     app.include_router(analysis.router)
     app.include_router(users.router)
-
-    @app.on_event("startup")
-    def seed_users() -> None:  # pragma: no cover - simple startup hook
-        with session_scope() as session:
-            deps.get_user_service().ensure_seed(session)
 
     return app

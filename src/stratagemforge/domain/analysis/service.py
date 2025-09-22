@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
 
@@ -60,5 +60,5 @@ class AnalysisService:
             status="completed",
             results=results,
             message=f"Analysis completed for demo {demo.id}",
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc),
         )

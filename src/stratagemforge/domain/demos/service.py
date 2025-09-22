@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Tuple
 from uuid import uuid4
@@ -54,7 +54,7 @@ class DemoService:
             size_bytes=total_size,
             content_type=upload.content_type,
             status="uploaded",
-            uploaded_at=datetime.utcnow(),
+            uploaded_at=datetime.now(timezone.utc),
         )
         demo = repo.save(demo)
 

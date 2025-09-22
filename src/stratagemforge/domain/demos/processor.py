@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any
 
@@ -35,7 +35,7 @@ class DemoProcessor:
     def process(self, payload: DemoProcessingInput) -> DemoProcessingResult:
         """Produce a minimal parquet dataset describing the uploaded demo."""
 
-        processed_at = datetime.utcnow()
+        processed_at = datetime.now(timezone.utc)
         parquet_path = self.processed_dir / f"{payload.demo_id}.parquet"
 
         # Derive lightweight metadata for quick inspection

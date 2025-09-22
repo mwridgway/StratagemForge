@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,7 +41,7 @@ class UserService:
         if not user:
             raise ValueError("User not found")
 
-        user.last_login_at = datetime.utcnow()
+        user.last_login_at = datetime.now(timezone.utc)
         session.add(user)
         session.commit()
         session.refresh(user)

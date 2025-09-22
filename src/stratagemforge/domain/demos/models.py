@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
@@ -23,7 +23,9 @@ class Demo(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     content_type: Mapped[Optional[str]] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(32), default="uploaded", nullable=False)
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     extra_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
 
