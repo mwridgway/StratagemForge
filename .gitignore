@@ -18,3 +18,5 @@ logs/
 maps/*
 demos/*
 parquet/*
+.coverage
+*.egg-info/

@@ -77,7 +77,8 @@ All data is stored beneath `./data` by default. The application will create subd
 ## Running Tests
 
 ```bash
-uv run pytest
+uv sync --extra dev
+uv run pytest -q --cov=stratagemforge --cov-report=term-missing  --cov-report=html --cov-fail-under=85
 ```
 
 Unit tests cover the ingestion processor and service, while integration tests exercise the FastAPI endpoints end-to-end using temporary data directories.

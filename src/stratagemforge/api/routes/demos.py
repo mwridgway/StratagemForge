@@ -42,7 +42,9 @@ async def upload_demo(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     message = "Demo uploaded and processed" if created else "Demo already processed"
-    return DemoUploadResponse.model_validate(stored, from_attributes=True).model_copy(update={"message": message})
+    # Validate ORM object into detail first, then attach message
+    detail = DemoDetail.model_validate(stored, from_attributes=True)
+    return DemoUploadResponse(**detail.model_dump(), message=message)
 
 
 @router.get("/{demo_id}/status", response_model=DemoProcessingStatus)
